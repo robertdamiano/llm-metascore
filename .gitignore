@@ -12,3 +12,7 @@ data/.cache/
 .vscode/
 .history/
 *.code-workspace
+
+# Python build metadata
+*.egg-info/
+llm_metascore.egg-info/
