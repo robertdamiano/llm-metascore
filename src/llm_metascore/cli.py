@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer
 
 from .fetch.arena import fetch_arena_general_sources, fetch_arena_coding_sources
-from .fetch.openrouter import fetch_openrouter_coding
+from .fetch.openrouter import fetch_openrouter_coding_sources
 from .core.aggregate import aggregate_average_rank
 from .core.vendors import identify_creator
 
@@ -15,6 +15,8 @@ app = typer.Typer(add_completion=False, help="Rank top LLM creators from local s
 def top(
     type: str = typer.Option("general", "--type", help="general|coding"),
     k: int = typer.Option(2, "--k", min=1, help="number of creators to return"),
+    details: bool = typer.Option(False, "--details", help="Show per-source ranks and aggregated rank"),
+    debug_sources: bool = typer.Option(False, "--debug-sources", help="List discovered sources and counts"),
 ):
     """Show top-k creators based on local HTML snapshots and aggregation rules."""
     type = type.lower().strip()
@@ -34,15 +36,28 @@ def top(
                 m[c] = min(m.get(c, 1_000_000), e.rank)
             return list(m.items())
 
+        if debug_sources:
+            for src, entries in sorted(sources_raw.items()):
+                typer.echo(f"source: {src} (rows={len(entries)})")
         sources = {src: best_by_creator_entries(entries) for src, entries in sources_raw.items() if entries}
         agg = aggregate_average_rank(sources)
-        for i, e in enumerate(agg[:k], start=1):
-            typer.echo(f"{i}. {e.name}")
+        topk = agg[:k]
+        if details:
+            for i, e in enumerate(topk, start=1):
+                typer.echo(f"{i}. {e.name} | avg {e.aggregated_rank:.2f}")
+                for src, rank in sorted(e.ranks.items()):
+                    typer.echo(f"   - {src}: {rank}")
+        else:
+            for i, e in enumerate(topk, start=1):
+                typer.echo(f"{i}. {e.name}")
         return
 
     # coding: aggregate lmarena (overview coding + webdev) + openrouter coding
     arena_sources = fetch_arena_coding_sources()
-    openrouter_entries = fetch_openrouter_coding()
+    openrouter_sources = fetch_openrouter_coding_sources()
+    if debug_sources:
+        for src, entries in sorted({**arena_sources, **openrouter_sources}.items()):
+            typer.echo(f"source: {src} (rows={len(entries)})")
 
     def best_by_creator_entries(entries):
         m: dict[str, int] = {}
@@ -52,10 +67,18 @@ def top(
         return list(m.items())
 
     sources = {src: best_by_creator_entries(entries) for src, entries in arena_sources.items()}
-    sources["openrouter:coding"] = best_by_creator_entries(openrouter_entries)
+    for src, entries in openrouter_sources.items():
+        sources[src] = best_by_creator_entries(entries)
     agg = aggregate_average_rank(sources)
-    for i, e in enumerate(agg[:k], start=1):
-        typer.echo(f"{i}. {e.name}")
+    topk = agg[:k]
+    if details:
+        for i, e in enumerate(topk, start=1):
+            typer.echo(f"{i}. {e.name} | avg {e.aggregated_rank:.2f}")
+            for src, rank in sorted(e.ranks.items()):
+                typer.echo(f"   - {src}: {rank}")
+    else:
+        for i, e in enumerate(topk, start=1):
+            typer.echo(f"{i}. {e.name}")
 
 
 if __name__ == "__main__":

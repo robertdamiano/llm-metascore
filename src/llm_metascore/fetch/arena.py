@@ -41,7 +41,7 @@ def fetch_arena_general_sources() -> Dict[str, List[ModelEntry]]:
             continue
         sources[f"lmarena:overview:{col}"] = entries
 
-    # Category leaderboards by headings
+    # Category leaderboards by headings or nearest table caption/heading
     categories = [
         "Text",
         "Vision",
@@ -51,8 +51,17 @@ def fetch_arena_general_sources() -> Dict[str, List[ModelEntry]]:
         "Text-to-Video",
         "Image-to-Video",
     ]
+    # Try precise parse by name
     for cat in categories:
         entries = _parse_category_leaderboard(html, cat, source=f"lmarena:{cat}")
+        if not entries:
+            # Fallback: map all tables to nearest heading and pick matches
+            for htext, table in _tables_with_headings(html):
+                if cat.lower() in htext.lower():
+                    parsed = _parse_named_table(table, f"lmarena:{cat}")
+                    if parsed:
+                        entries = parsed
+                        break
         if entries:
             sources[f"lmarena:{cat}"] = entries
 
@@ -74,6 +83,12 @@ def fetch_arena_coding_sources() -> Dict[str, List[ModelEntry]]:
     if coding:
         sources["lmarena:overview:Coding"] = coding
     webdev = _parse_category_leaderboard(html, "WebDev", source="lmarena:WebDev")
+    if not webdev:
+        for htext, table in _tables_with_headings(html):
+            if "webdev" in htext.lower():
+                webdev = _parse_named_table(table, "lmarena:WebDev")
+                if webdev:
+                    break
     if webdev:
         sources["lmarena:WebDev"] = webdev
     return sources
@@ -229,7 +244,9 @@ def _parse_category_leaderboard(html: str, heading: str, source: str) -> List[Mo
         # Fallback: any table with caption/header containing heading
         for t in soup.find_all("table"):
             cap = t.find("caption")
-            txt = (cap.get_text(" ", strip=True) if cap else "") + " " + " ".join(th.get_text(" ", strip=True) for th in t.find_all("th"))
+            txt = (cap.get_text(" ", strip=True) if cap else "") + " " + " ".join(
+                th.get_text(" ", strip=True) for th in t.find_all("th")
+            )
             if heading.lower() in txt.lower():
                 table = t
                 break
@@ -239,9 +256,40 @@ def _parse_category_leaderboard(html: str, heading: str, source: str) -> List[Mo
     # Parse: assume first column is rank, second is name
     rows = table.find("tbody") or table
     trs = rows.find_all("tr")
+    return _parse_named_table(trs, source)
+
+
+def _tables_with_headings(html: str) -> List[Tuple[str, object]]:
+    """Return list of (heading_text, table_element) pairs for all tables on the page."""
+    soup = BeautifulSoup(html, "html.parser")
+    pairs: List[Tuple[str, object]] = []
+    for table in soup.find_all("table"):
+        # Find nearest previous heading text
+        htxt = ""
+        prev = table
+        for _ in range(8):
+            prev = prev.find_previous_sibling()
+            if not prev:
+                break
+            if prev.name in {"h1", "h2", "h3", "h4", "h5", "h6"}:
+                htxt = prev.get_text(" ", strip=True)
+                break
+        if not htxt:
+            cap = table.find("caption")
+            if cap:
+                htxt = cap.get_text(" ", strip=True)
+        pairs.append((htxt, table))
+    return pairs
+
+
+def _parse_named_table(table_or_tbody, source: str) -> List[ModelEntry]:
+    """Parse a table-like element assuming first column rank, second column name."""
+    tbody = table_or_tbody.find("tbody") if hasattr(table_or_tbody, "find") else None
+    rows_container = tbody or table_or_tbody
+    trs = rows_container.find_all("tr") if hasattr(rows_container, "find_all") else []
     entries: List[ModelEntry] = []
     for tr in trs:
-        cells = tr.find_all(["td", "th"])
+        cells = tr.find_all(["td", "th"]) if hasattr(tr, "find_all") else []
         if len(cells) < 2:
             continue
         rank = None
