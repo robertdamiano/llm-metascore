@@ -1,0 +1,21 @@
+[project]
+name = "llm-metascore"
+version = "0.1.0"
+description = "Rank top general and coding LLMs"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Robert Damiano" }]
+license = { text = "MIT" }
+dependencies = [
+  "requests>=2.31.0",
+  "beautifulsoup4>=4.12.2",
+  "typer>=0.12.3",
+  "pydantic>=2.8.2"
+]
+
+[project.scripts]
+llm-metascore = "llm_metascore.cli:app"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
