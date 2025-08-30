@@ -9,6 +9,11 @@ def aggregate_average_rank(sources: Dict[str, List[Tuple[str, int]]]) -> List[Ag
     Missing-from-source handling: assign rank = (max_rank_of_that_source + 1).
     Tie-breaks: none (preserve ordering given by Python's sort stability).
     """
+    # Drop sources with no data to avoid biasing ranks
+    sources = {src: pairs for src, pairs in sources.items() if pairs}
+    if not sources:
+        return []
+
     # Determine max rank per source
     max_ranks: Dict[str, int] = {}
     for src, pairs in sources.items():
@@ -41,4 +46,3 @@ def aggregate_average_rank(sources: Dict[str, List[Tuple[str, int]]]) -> List[Ag
 
     aggregated.sort(key=lambda e: e.aggregated_rank)
     return aggregated
-

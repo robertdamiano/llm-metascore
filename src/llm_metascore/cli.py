@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-import sys
 import typer
 
 from .fetch.arena import fetch_arena_general, fetch_arena_coding
@@ -62,4 +60,3 @@ def top(
 
 if __name__ == "__main__":
     app()
-
