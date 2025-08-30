@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import List, Optional
 import pathlib
 import time
-import requests
 from bs4 import BeautifulSoup
 
 from ..core.models import ModelEntry
@@ -11,27 +10,6 @@ from ..core.models import ModelEntry
 
 CACHE_DIR = pathlib.Path("data/.cache")
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/126.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-    "Upgrade-Insecure-Requests": "1",
-}
-
-
-def _cache_snapshot(name: str, content: bytes) -> None:
-    ts = int(time.time())
-    path = CACHE_DIR / f"{name}-{ts}.html"
-    try:
-        path.write_bytes(content)
-    except Exception:
-        pass
 
 
 def _load_latest_snapshot(prefix: str) -> Optional[str]:
@@ -45,18 +23,11 @@ def _load_latest_snapshot(prefix: str) -> Optional[str]:
 
 
 def fetch_openrouter_coding() -> List[ModelEntry]:
-    """Fetch openrouter.ai coding rankings and parse into ModelEntry list.
-    Prefers a cached snapshot (saved from a browser) if present.
-    """
-    snap = _load_latest_snapshot("openrouter-coding")
-    if snap is not None:
-        soup = BeautifulSoup(snap, "html.parser")
-    else:
-        url = "https://openrouter.ai/rankings/coding"
-        resp = requests.get(url, headers=HEADERS, timeout=30)
-        resp.raise_for_status()
-        _cache_snapshot("openrouter-coding", resp.content)
-        soup = BeautifulSoup(resp.text, "html.parser")
+    """Parse openrouter coding rankings from a local snapshot (openrouter-*.html)."""
+    snap = _load_latest_snapshot("openrouter")
+    if snap is None:
+        return []
+    soup = BeautifulSoup(snap, "html.parser")
     entries: List[ModelEntry] = []
 
     # Heuristic parsing based on visible ranking lists

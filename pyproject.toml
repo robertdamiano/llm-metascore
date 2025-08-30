@@ -1,13 +1,12 @@
 [project]
 name = "llm-metascore"
-version = "0.1.0"
-description = "Rank top general and coding LLMs"
+version = "0.1.1"
+description = "Rank top general and coding LLMs from local snapshots"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Robert Damiano" }]
 license = { text = "MIT" }
 dependencies = [
-  "requests>=2.31.0",
   "beautifulsoup4>=4.12.2",
   "typer>=0.12.3",
   "pydantic>=2.8.2"

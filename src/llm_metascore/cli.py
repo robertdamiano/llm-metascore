@@ -5,6 +5,7 @@ import typer
 from .fetch.arena import fetch_arena_general, fetch_arena_coding
 from .fetch.openrouter import fetch_openrouter_coding
 from .core.aggregate import aggregate_average_rank
+from .core.vendors import identify_creator
 
 
 app = typer.Typer(add_completion=False, help="Rank top LLMs from public leaderboards")
@@ -28,34 +29,38 @@ def top(
 
     if type == "general":
         entries = fetch_arena_general()
-        top_entries = entries[:k]
-        if out == "md":
-            for i, e in enumerate(top_entries, start=1):
-                typer.echo(f"{i}. {e.name} (lmarena rank {e.rank}, score {e.score})")
-        else:
-            for i, e in enumerate(top_entries, start=1):
-                typer.echo(f"{i}. {e.name} | lmarena rank {e.rank} | score {e.score}")
+        # Collapse to creators using best rank per creator
+        best: dict[str, int] = {}
+        for e in entries:
+            c = identify_creator(e.name)
+            best[c] = min(best.get(c, 1_000_000), e.rank)
+        ordered = sorted(best.items(), key=lambda kv: kv[1])[:k]
+        for i, (creator, _) in enumerate(ordered, start=1):
+            typer.echo(f"{i}. {creator}")
         return
 
     # coding: aggregate lmarena coding + openrouter coding by average rank
     arena = fetch_arena_coding()
     openrouter = fetch_openrouter_coding()
 
+    # Convert to creator-level ranks (best rank per creator per source)
+    def best_by_creator(pairs):
+        m: dict[str, int] = {}
+        for name, rank in pairs:
+            c = identify_creator(name)
+            m[c] = min(m.get(c, 1_000_000), rank)
+        # Return as list of tuples
+        return list(m.items())
+
     sources = {
-        "lmarena:coding": [(e.name, e.rank) for e in arena],
-        "openrouter:coding": [(e.name, e.rank) for e in openrouter],
+        "lmarena:coding": best_by_creator([(e.name, e.rank) for e in arena]),
+        "openrouter:coding": best_by_creator([(e.name, e.rank) for e in openrouter]),
     }
     agg = aggregate_average_rank(sources)
     top_entries = agg[:k]
 
-    if out == "md":
-        for i, e in enumerate(top_entries, start=1):
-            ranks_str = ", ".join(f"{src} #{rank}" for src, rank in e.ranks.items())
-            typer.echo(f"{i}. {e.name} (avg rank {e.aggregated_rank:.2f}) — {ranks_str}")
-    else:
-        for i, e in enumerate(top_entries, start=1):
-            ranks_str = " | ".join(f"{src}:{rank}" for src, rank in e.ranks.items())
-            typer.echo(f"{i}. {e.name} | avg {e.aggregated_rank:.2f} | {ranks_str}")
+    for i, e in enumerate(top_entries, start=1):
+        typer.echo(f"{i}. {e.name}")
 
 
 if __name__ == "__main__":
