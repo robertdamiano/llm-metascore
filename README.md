@@ -20,24 +20,23 @@ pip install -e .
 
 Python module:
 ```
-python -m llm_metascore.cli --type general --k 2
-python -m llm_metascore.cli --type coding  --k 3 --details
+python -m llm_metascore.cli --type general
+python -m llm_metascore.cli --type coding  --details
 ```
 
 Entry point (if installed):
 ```
-llm-metascore --type general --k 2
-llm-metascore --type coding  --k 3 --details
+llm-metascore --type general
+llm-metascore --type coding  --details
 ```
 
 Flags:
 - `--type`: `general` (lmarena only) or `coding` (lmarena + openrouter)
-- `--k`: number of creators to list
 - `--details`: print aggregated average and per-source ranks
 
 ## Aggregation Rules
 
-- Convert each source to best rank per creator; average ranks across sources.
+- Convert each source to best rank per creator using dense, tie‑preserving ranks; average ranks across sources.
 - Missing-in-source rank = max rank in that source + 1.
 - No tie-breaks (stable sort by average rank).
 
@@ -52,6 +51,8 @@ Coding mode sources:
 - Anthropic: contains `claude`
 - xAI: contains `grok`
 - Else: `provider/model` prefix if present, otherwise `Other`
+
+Note: Rankings always include exactly these four creators: OpenAI, Google, Anthropic, and xAI. Entries mapped to any other creator (including `Other`) are ignored. If a creator is missing from a given source/category, they receive the worst rank for that source (max rank + 1).
 
 ## License
 

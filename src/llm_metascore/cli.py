@@ -5,7 +5,7 @@ import typer
 from .fetch.arena import fetch_arena_general_sources, fetch_arena_coding_sources
 from .fetch.openrouter import fetch_openrouter_coding_sources
 from .core.aggregate import aggregate_average_rank
-from .core.vendors import identify_creator
+from .core.vendors import identify_creator, ALLOWED_CREATORS
 
 
 app = typer.Typer(add_completion=False, help="Rank top LLM creators from local snapshots")
@@ -14,10 +14,9 @@ app = typer.Typer(add_completion=False, help="Rank top LLM creators from local s
 @app.callback(invoke_without_command=True)
 def top(
     type: str = typer.Option("general", "--type", help="general|coding"),
-    k: int = typer.Option(2, "--k", min=1, help="number of creators to return"),
     details: bool = typer.Option(False, "--details", help="Show per-source ranks and aggregated rank"),
 ):
-    """Show top-k creators based on local Markdown snapshots and aggregation rules."""
+    """Show rankings for OpenAI, Google, Anthropic, and xAI using local snapshots."""
     type = type.lower().strip()
     if type not in {"general", "coding"}:
         typer.echo("--type must be 'general' or 'coding'", err=True)
@@ -32,23 +31,30 @@ def top(
             m: dict[str, int] = {}
             for e in entries:
                 c = identify_creator(e.name)
+                if c not in ALLOWED_CREATORS:
+                    continue
                 m[c] = min(m.get(c, 1_000_000), e.rank)
-            # Re-rank creators to eliminate gaps after taking best rank
+            # Dense, tie-preserving re-ranking of best ranks
+            if not m:
+                return []
+            uniq = sorted(set(m.values()))
+            dense_map = {v: i + 1 for i, v in enumerate(uniq)}
             return [
-                (name, i + 1)
-                for i, (name, _) in enumerate(sorted(m.items(), key=lambda kv: kv[1]))
+                (name, dense_map[rank])
+                for name, rank in sorted(m.items(), key=lambda kv: (kv[1], kv[0]))
             ]
 
         sources = {src: best_by_creator_entries(entries) for src, entries in sources_raw.items() if entries}
         agg = aggregate_average_rank(sources)
-        topk = agg[:k]
+        # Keep only the allowed creators, in order of aggregated rank
+        filtered = [e for e in agg if e.name in ALLOWED_CREATORS]
         if details:
-            for i, e in enumerate(topk, start=1):
+            for i, e in enumerate(filtered, start=1):
                 typer.echo(f"{i}. {e.name} | avg {e.aggregated_rank:.2f}")
                 for src, rank in sorted(e.ranks.items()):
                     typer.echo(f"   - {src}: {rank}")
         else:
-            for i, e in enumerate(topk, start=1):
+            for i, e in enumerate(filtered, start=1):
                 typer.echo(f"{i}. {e.name}")
         return
 
@@ -59,25 +65,31 @@ def top(
         m: dict[str, int] = {}
         for e in entries:
             c = identify_creator(e.name)
+            if c not in ALLOWED_CREATORS:
+                continue
             m[c] = min(m.get(c, 1_000_000), e.rank)
-        # Re-rank creators to eliminate gaps after taking best rank
+        # Dense, tie-preserving re-ranking of best ranks
+        if not m:
+            return []
+        uniq = sorted(set(m.values()))
+        dense_map = {v: i + 1 for i, v in enumerate(uniq)}
         return [
-            (name, i + 1)
-            for i, (name, _) in enumerate(sorted(m.items(), key=lambda kv: kv[1]))
+            (name, dense_map[rank])
+            for name, rank in sorted(m.items(), key=lambda kv: (kv[1], kv[0]))
         ]
 
     sources = {src: best_by_creator_entries(entries) for src, entries in arena_sources.items()}
     for src, entries in openrouter_sources.items():
         sources[src] = best_by_creator_entries(entries)
     agg = aggregate_average_rank(sources)
-    topk = agg[:k]
+    filtered = [e for e in agg if e.name in ALLOWED_CREATORS]
     if details:
-        for i, e in enumerate(topk, start=1):
+        for i, e in enumerate(filtered, start=1):
             typer.echo(f"{i}. {e.name} | avg {e.aggregated_rank:.2f}")
             for src, rank in sorted(e.ranks.items()):
                 typer.echo(f"   - {src}: {rank}")
     else:
-        for i, e in enumerate(topk, start=1):
+        for i, e in enumerate(filtered, start=1):
             typer.echo(f"{i}. {e.name}")
 
 

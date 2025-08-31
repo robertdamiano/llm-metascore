@@ -3,24 +3,19 @@ from __future__ import annotations
 import re
 
 
+ALLOWED_CREATORS = {"OpenAI", "Google", "Anthropic", "xAI"}
+
+
 def identify_creator(model_name: str) -> str:
     n = (model_name or "").lower()
-    # Normalize known provider slugs to canonical creator names
+    # Normalize known provider slugs to canonical creator names (only those we track)
     provider_map = {
         "openai": "OpenAI",
         "google": "Google",
         "anthropic": "Anthropic",
         "x-ai": "xAI",
         "xai": "xAI",
-        "deepseek": "DeepSeek",
-        "qwen": "Qwen",
-        "mistralai": "Mistral",
-        "mistral": "Mistral",
-        "meta-llama": "Meta",
-        "meta": "Meta",
-        "z-ai": "ZhipuAI",
-        "zhipu": "ZhipuAI",
-        "tngtech": "TNGTech",
+        # Common placeholders
         "others": "Other",
         "other": "Other",
     }

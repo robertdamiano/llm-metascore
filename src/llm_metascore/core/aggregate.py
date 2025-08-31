@@ -1,5 +1,6 @@
 from typing import Dict, List, Iterable, Tuple
 from .models import AggregatedEntry
+from .vendors import ALLOWED_CREATORS
 
 
 def aggregate_average_rank(sources: Dict[str, List[Tuple[str, int]]]) -> List[AggregatedEntry]:
@@ -24,6 +25,8 @@ def aggregate_average_rank(sources: Dict[str, List[Tuple[str, int]]]) -> List[Ag
     for pairs in sources.values():
         for name, _ in pairs:
             model_names.add(name)
+    # Ensure we always include the allowed creators, even if absent everywhere
+    model_names.update(ALLOWED_CREATORS)
 
     # Build fast lookup per source
     lookup: Dict[str, Dict[str, int]] = {src: {name: rank for name, rank in pairs} for src, pairs in sources.items()}

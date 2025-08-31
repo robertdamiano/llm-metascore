@@ -137,11 +137,15 @@ def _parse_overview_columns_md(md: str, source_prefix: str) -> Dict[str, List[Mo
     results: Dict[str, List[ModelEntry]] = {}
     for col_idx, items in col_items.items():
         col_name = headers[col_idx] if col_idx < len(headers) else f"Col{col_idx}"
+        # Preserve the numeric value from the cell as the rank (ties allowed)
         items.sort(key=lambda x: x[1])
-        results[col_name] = [
-            ModelEntry(name=name, rank=i + 1, score=None, source=f"{source_prefix}:{col_name}")
-            for i, (name, _) in enumerate(items)
+        entries = [
+            ModelEntry(name=name, rank=value, score=None, source=f"{source_prefix}:{col_name}")
+            for (name, value) in items
         ]
+        # Keep sorted for stable downstream processing
+        entries.sort(key=lambda e: e.rank)
+        results[col_name] = entries
     return results
 
 
