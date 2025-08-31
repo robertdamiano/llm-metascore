@@ -33,7 +33,11 @@ def top(
             for e in entries:
                 c = identify_creator(e.name)
                 m[c] = min(m.get(c, 1_000_000), e.rank)
-            return list(m.items())
+            # Re-rank creators to eliminate gaps after taking best rank
+            return [
+                (name, i + 1)
+                for i, (name, _) in enumerate(sorted(m.items(), key=lambda kv: kv[1]))
+            ]
 
         sources = {src: best_by_creator_entries(entries) for src, entries in sources_raw.items() if entries}
         agg = aggregate_average_rank(sources)
@@ -56,7 +60,11 @@ def top(
         for e in entries:
             c = identify_creator(e.name)
             m[c] = min(m.get(c, 1_000_000), e.rank)
-        return list(m.items())
+        # Re-rank creators to eliminate gaps after taking best rank
+        return [
+            (name, i + 1)
+            for i, (name, _) in enumerate(sorted(m.items(), key=lambda kv: kv[1]))
+        ]
 
     sources = {src: best_by_creator_entries(entries) for src, entries in arena_sources.items()}
     for src, entries in openrouter_sources.items():
