@@ -16,9 +16,8 @@ def top(
     type: str = typer.Option("general", "--type", help="general|coding"),
     k: int = typer.Option(2, "--k", min=1, help="number of creators to return"),
     details: bool = typer.Option(False, "--details", help="Show per-source ranks and aggregated rank"),
-    debug_sources: bool = typer.Option(False, "--debug-sources", help="List discovered sources and counts"),
 ):
-    """Show top-k creators based on local HTML snapshots and aggregation rules."""
+    """Show top-k creators based on local Markdown snapshots and aggregation rules."""
     type = type.lower().strip()
     if type not in {"general", "coding"}:
         typer.echo("--type must be 'general' or 'coding'", err=True)
@@ -36,9 +35,6 @@ def top(
                 m[c] = min(m.get(c, 1_000_000), e.rank)
             return list(m.items())
 
-        if debug_sources:
-            for src, entries in sorted(sources_raw.items()):
-                typer.echo(f"source: {src} (rows={len(entries)})")
         sources = {src: best_by_creator_entries(entries) for src, entries in sources_raw.items() if entries}
         agg = aggregate_average_rank(sources)
         topk = agg[:k]
@@ -55,10 +51,6 @@ def top(
     # coding: aggregate lmarena (overview coding + webdev) + openrouter coding
     arena_sources = fetch_arena_coding_sources()
     openrouter_sources = fetch_openrouter_coding_sources()
-    if debug_sources:
-        for src, entries in sorted({**arena_sources, **openrouter_sources}.items()):
-            typer.echo(f"source: {src} (rows={len(entries)})")
-
     def best_by_creator_entries(entries):
         m: dict[str, int] = {}
         for e in entries:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Dict, Tuple
 import pathlib
-from bs4 import BeautifulSoup
+from .text_parsers import first_table_by_section, MarkdownTable
 
 from ..core.models import ModelEntry
 
@@ -13,7 +13,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 def _load_latest_snapshot(prefix: str) -> Optional[str]:
     try:
-        files = sorted(CACHE_DIR.glob(f"{prefix}-*.html"), reverse=True)
+        files = sorted(CACHE_DIR.glob(f"{prefix}-*.md"), reverse=True)
         if not files:
             return None
         return files[0].read_text(encoding="utf-8", errors="ignore")
@@ -28,14 +28,14 @@ def fetch_arena_general_sources() -> Dict[str, List[ModelEntry]]:
     - Arena Overview columns excluding 'Coding' (e.g., Overall, Math, etc.)
     - Category leaderboards: Text, Vision, Text-to-Image, Image Edit, Search, Text-to-Video, Image-to-Video
     """
-    html = _load_latest_snapshot("lmarena")
-    if html is None:
+    md = _load_latest_snapshot("lmarena")
+    if md is None:
         return {}
 
     sources: Dict[str, List[ModelEntry]] = {}
 
     # Overview columns (all except Coding and Model)
-    overview = _parse_overview_columns(html, source_prefix="lmarena:overview")
+    overview = _parse_overview_columns_md(md, source_prefix="lmarena:overview")
     for col, entries in overview.items():
         if col.lower() == "coding":
             continue
@@ -51,17 +51,9 @@ def fetch_arena_general_sources() -> Dict[str, List[ModelEntry]]:
         "Text-to-Video",
         "Image-to-Video",
     ]
-    # Try precise parse by name
+    # Directly parse by section name
     for cat in categories:
-        entries = _parse_category_leaderboard(html, cat, source=f"lmarena:{cat}")
-        if not entries:
-            # Fallback: map all tables to nearest heading and pick matches
-            for htext, table in _tables_with_headings(html):
-                if cat.lower() in htext.lower():
-                    parsed = _parse_named_table(table, f"lmarena:{cat}")
-                    if parsed:
-                        entries = parsed
-                        break
+        entries = _parse_category_leaderboard_md(md, cat, source=f"lmarena:{cat}")
         if entries:
             sources[f"lmarena:{cat}"] = entries
 
@@ -75,23 +67,118 @@ def fetch_arena_coding_sources() -> Dict[str, List[ModelEntry]]:
     - Arena Overview 'Coding' column
     - 'WebDev' category leaderboard
     """
-    html = _load_latest_snapshot("lmarena")
-    if html is None:
+    md = _load_latest_snapshot("lmarena")
+    if md is None:
         return {}
     sources: Dict[str, List[ModelEntry]] = {}
-    coding = _parse_overview_column(html, column_name="Coding", source="lmarena:overview:Coding")
+    coding = _parse_overview_column_md(md, column_name="Coding", source="lmarena:overview:Coding")
     if coding:
         sources["lmarena:overview:Coding"] = coding
-    webdev = _parse_category_leaderboard(html, "WebDev", source="lmarena:WebDev")
-    if not webdev:
-        for htext, table in _tables_with_headings(html):
-            if "webdev" in htext.lower():
-                webdev = _parse_named_table(table, "lmarena:WebDev")
-                if webdev:
-                    break
+    webdev = _parse_category_leaderboard_md(md, "WebDev", source="lmarena:WebDev")
     if webdev:
         sources["lmarena:WebDev"] = webdev
     return sources
+
+
+def _parse_overview_column_md(md: str, column_name: str, source: str) -> List[ModelEntry]:
+    """Parse Arena Overview table (Markdown) for a given column (e.g., 'Overall', 'Coding')."""
+    t = first_table_by_section(md, "Arena Overview")
+    if not t:
+        return []
+    headers_lower = [h.strip().lower() for h in t.headers]
+    try:
+        name_idx = next(i for i, h in enumerate(headers_lower) if h.startswith("model"))
+        col_idx = headers_lower.index(column_name.lower())
+    except Exception:
+        return []
+    entries: List[ModelEntry] = []
+    for r in t.rows:
+        if len(r) <= max(name_idx, col_idx):
+            continue
+        name = r[name_idx].strip()
+        val = r[col_idx].strip()
+        if not name:
+            continue
+        digits = "".join(ch for ch in val if ch.isdigit())
+        if not digits:
+            continue
+        rank = int(digits)
+        entries.append(ModelEntry(name=name, rank=rank, score=None, source=source))
+    entries.sort(key=lambda e: e.rank)
+    return entries
+
+
+def _parse_overview_columns_md(md: str, source_prefix: str) -> Dict[str, List[ModelEntry]]:
+    """Parse all non-Model columns from Arena Overview Markdown table into per-column rankings."""
+    t = first_table_by_section(md, "Arena Overview")
+    if not t:
+        return {}
+    headers = t.headers
+    headers_lower = [h.strip().lower() for h in headers]
+    try:
+        name_idx = next(i for i, h in enumerate(headers_lower) if h.startswith("model"))
+    except StopIteration:
+        return {}
+    # Collect numeric cell per column
+    col_items: Dict[int, List[Tuple[str, int]]] = {}
+    for r in t.rows:
+        if len(r) <= name_idx:
+            continue
+        name = r[name_idx].strip()
+        if not name:
+            continue
+        for col_idx, cell in enumerate(r):
+            if col_idx == name_idx:
+                continue
+            digits = "".join(ch for ch in cell if ch.isdigit())
+            if not digits:
+                continue
+            col_items.setdefault(col_idx, []).append((name, int(digits)))
+    results: Dict[str, List[ModelEntry]] = {}
+    for col_idx, items in col_items.items():
+        col_name = headers[col_idx] if col_idx < len(headers) else f"Col{col_idx}"
+        items.sort(key=lambda x: x[1])
+        results[col_name] = [
+            ModelEntry(name=name, rank=i + 1, score=None, source=f"{source_prefix}:{col_name}")
+            for i, (name, _) in enumerate(items)
+        ]
+    return results
+
+
+def _parse_category_leaderboard_md(md: str, heading: str, source: str) -> List[ModelEntry]:
+    t = first_table_by_section(md, heading)
+    if not t:
+        return []
+    return _parse_named_md_table(t, source)
+
+
+def _parse_named_md_table(table: MarkdownTable, source: str) -> List[ModelEntry]:
+    headers_lower = [h.strip().lower() for h in table.headers]
+    try:
+        name_idx = next(i for i, h in enumerate(headers_lower) if h.startswith("model"))
+    except StopIteration:
+        name_idx = 1 if len(headers_lower) > 1 else 0
+    rank_idx = None
+    for i, h in enumerate(headers_lower):
+        if "rank" in h:
+            rank_idx = i
+            break
+    if rank_idx is None:
+        rank_idx = 0
+
+    entries: List[ModelEntry] = []
+    for r in table.rows:
+        if len(r) <= max(name_idx, rank_idx):
+            continue
+        name = r[name_idx].strip()
+        if not name:
+            continue
+        rv = r[rank_idx].strip().replace('#', '')
+        digits = "".join(ch for ch in rv if ch.isdigit())
+        rank = int(digits) if digits else len(entries) + 1
+        entries.append(ModelEntry(name=name, rank=rank, score=None, source=source))
+    entries.sort(key=lambda e: e.rank)
+    return entries
 
 
 def _parse_overview_column(html: str, column_name: str, source: str) -> List[ModelEntry]:

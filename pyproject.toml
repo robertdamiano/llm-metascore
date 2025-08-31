@@ -1,7 +1,7 @@
 [project]
 name = "llm-metascore"
-version = "0.1.1"
-description = "Rank top general and coding LLMs from local snapshots"
+version = "0.2.0"
+description = "Rank top LLM creators from Markdown snapshots (lmarena + openrouter)"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{ name = "Robert Damiano" }]
