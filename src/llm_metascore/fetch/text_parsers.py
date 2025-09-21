@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -12,7 +12,7 @@ class MarkdownTable:
 
 
 def _is_md_heading(line: str) -> Optional[str]:
-    s = line.strip()
+    s = line.lstrip("\ufeff").strip()
     # Hash heading: # Title
     if s.startswith("#"):
         # count leading #'s then strip
