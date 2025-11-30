@@ -10,6 +10,7 @@
     "firebase:deploy": "firebase deploy"
   },
   "dependencies": {
+    "@types/markdown-it": "14.1.2",
     "acorn": "8.15.0",
     "cheerio": "^1.0.0",
     "markdown-it": "14.1.0",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/markdown-it": "14.1.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
