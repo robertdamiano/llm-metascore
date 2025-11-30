@@ -1,0 +1,34 @@
+{
+  "name": "llm-metascore",
+  "version": "0.3.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "firebase:deploy": "firebase deploy"
+  },
+  "dependencies": {
+    "acorn": "8.15.0",
+    "cheerio": "^1.0.0",
+    "markdown-it": "14.1.0",
+    "next": "15.5.4",
+    "protobufjs": "7.2.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/markdown-it": "14.1.2",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.4",
+    "firebase-tools": "^14.17.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
