@@ -1,38 +1,83 @@
 # llm-metascore
 
-Rank top LLM creators (companies) using local Markdown snapshots from lmarena and openrouter. Supports two modes: general and coding.
+Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from multiple live sources.
 
-## Snapshot Inputs
+## Web Application
 
-Place Markdown snapshots under `data/.cache/`:
-- `lmarena-YYYYMMDD.md`: must include an “Arena Overview” table. If available, include category sections like `**Text**`, `**Vision**`, `**Text-to-Image**`, `**Image Edit**`, `**Search**`, `**Text-to-Video**`, `**Image-to-Video**`, `**WebDev**` with pipe tables.
-- `openrouter-YYYYMMDD.md`: include the sections `# Leaderboard`, `# Market Share`, and `# Programming` with pipe tables.
+A Next.js web application that fetches and displays real-time rankings from:
+- **General**: LMArena general leaderboards
+- **Coding**: LMArena coding + SWE Bench bash-only
+- **Top Apps**: OpenRouter top apps (this week)
 
-The parser associates each table with the nearest heading/bold section title and extracts ranks from numeric cells.
+### Setup
 
-## Install
-
+Install dependencies:
+```bash
+npm install
 ```
+
+### Development
+
+Run the development server:
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Deploy to Firebase
+
+This app uses Next.js with API routes, which requires Firebase Web Frameworks support.
+
+1. **Authenticate with Firebase**:
+   ```bash
+   firebase login --no-localhost
+   ```
+
+2. **Initialize Firebase Hosting** (if not already done):
+   ```bash
+   firebase init hosting
+   # Select: Set up GitHub Action deploys? No
+   # Firebase will auto-detect Next.js and set up Web Frameworks
+   ```
+
+3. **Deploy**:
+   ```bash
+   npm run firebase:deploy
+   ```
+
+Firebase will automatically build and deploy your Next.js app with Cloud Functions for server-side rendering and API routes.
+
+**Note**: Your Firebase project must be on the Blaze (pay-as-you-go) plan to use Cloud Functions.
+
+## Python CLI (Legacy)
+
+The original Python CLI is still available in `src/llm_metascore/`.
+
+### Install
+
+```bash
 pip install -e .
 ```
 
-## Usage
+### Usage
 
-Python module:
-```
+```bash
 python -m llm_metascore.cli --type general
-python -m llm_metascore.cli --type coding  --details
+python -m llm_metascore.cli --type coding --details
 ```
 
-Entry point (if installed):
-```
+Or if installed:
+```bash
 llm-metascore --type general
-llm-metascore --type coding  --details
+llm-metascore --type coding --details
 ```
 
 Flags:
 - `--type`: `general` (lmarena only) or `coding` (lmarena + openrouter)
 - `--details`: print aggregated average and per-source ranks
+
+**Note:** The Python CLI uses local Markdown snapshots from `data/.cache/`, while the web app fetches live data.
 
 ## Aggregation Rules
 
