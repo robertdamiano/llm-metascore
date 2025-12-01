@@ -5,7 +5,8 @@ import { AggregatedEntry, RankingMode } from '@/lib/types';
 
 export default function Home() {
   const [mode, setMode] = useState<RankingMode>('general');
-  const [rankings, setRankings] = useState<AggregatedEntry[]>([]);
+  const [generalRankings, setGeneralRankings] = useState<AggregatedEntry[]>([]);
+  const [codingRankings, setCodingRankings] = useState<AggregatedEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -16,43 +17,62 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch(`/api/rankings?mode=${mode}`);
+      // Fetch both general and coding rankings
+      const [generalRes, codingRes] = await Promise.all([
+        fetch('/api/rankings?mode=general'),
+        fetch('/api/rankings?mode=coding')
+      ]);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch rankings');
+      if (!generalRes.ok || !codingRes.ok) {
+        throw new Error('Failed to fetch rankings');
       }
 
-      const data = await response.json();
-      setRankings(data.rankings);
+      const [generalData, codingData] = await Promise.all([
+        generalRes.json(),
+        codingRes.json()
+      ]);
+
+      setGeneralRankings(generalData.rankings);
+      setCodingRankings(codingData.rankings);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-      setRankings([]);
+      setGeneralRankings([]);
+      setCodingRankings([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const formatSourceName = (source: string): string => {
+    // Remove 'openlm:' prefix and format nicely
+    return source
+      .replace('openlm:arena:', 'Arena ')
+      .replace('openlm:', '')
+      .replace('swebench', 'SWE-bench')
+      .replace('overall', 'Overall')
+      .replace('coding', 'Coding');
+  };
+
+  const getCurrentRankings = () => {
+    return mode === 'general' ? generalRankings : codingRankings;
+  };
+
   const getModeTitle = () => {
     switch (mode) {
       case 'general':
-        return 'General Rankings';
+        return 'General Intelligence Rankings';
       case 'coding':
         return 'Coding Rankings';
-      case 'apps':
-        return 'Top Apps (This Week)';
     }
   };
 
   const getModeDescription = () => {
     switch (mode) {
       case 'general':
-        return 'Rankings based on LMArena general leaderboards (excluding coding)';
+        return 'Rankings based on Chatbot Arena Elo scores';
       case 'coding':
-        return 'Rankings based on LMArena coding leaderboards and SWE Bench bash-only';
-      case 'apps':
-        return 'Rankings based on OpenRouter top apps this week';
+        return 'Rankings based on Chatbot Arena Coding and SWE-bench';
     }
   };
 
@@ -93,16 +113,17 @@ export default function Home() {
               >
                 Coding
               </button>
-              <button
-                onClick={() => setMode('apps')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  mode === 'apps'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+              <a
+                href="https://openrouter.ai/rankings#apps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 rounded-lg font-medium transition-colors bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
               >
                 Top Apps
-              </button>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
             </div>
 
             <button
@@ -133,7 +154,7 @@ export default function Home() {
         )}
 
         {/* Rankings Display */}
-        {rankings.length > 0 && (
+        {getCurrentRankings().length > 0 && (
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
@@ -150,7 +171,7 @@ export default function Home() {
             </div>
 
             <div className="divide-y divide-gray-200">
-              {rankings.map((entry, index) => (
+              {getCurrentRankings().map((entry, index) => (
                 <div key={entry.name} className="p-6 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -174,10 +195,10 @@ export default function Home() {
                             .map(([source, rank]) => (
                               <div
                                 key={source}
-                                className="text-xs text-gray-500 flex justify-between max-w-md"
+                                className="text-xs text-gray-500 flex items-center gap-2"
                               >
-                                <span>{source}</span>
-                                <span className="font-medium">#{rank}</span>
+                                <span className="font-medium">{formatSourceName(source)}:</span>
+                                <span className="font-semibold text-gray-700">#{rank}</span>
                               </div>
                             ))}
                         </div>
@@ -191,7 +212,7 @@ export default function Home() {
         )}
 
         {/* Empty State */}
-        {!loading && rankings.length === 0 && !error && (
+        {!loading && getCurrentRankings().length === 0 && !error && (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <p className="text-gray-600 mb-4">
               Click "Refresh Rankings" to load the latest data
@@ -202,10 +223,10 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>
-            Rankings aggregated from LMArena, SWE Bench, and OpenRouter
+            Rankings aggregated from Chatbot Arena and SWE-bench leaderboards
           </p>
           <p className="mt-2">
-            Tracking: OpenAI, Google, Anthropic, and xAI
+            Tracking: Anthropic, Google, OpenAI, and xAI
           </p>
         </footer>
       </div>

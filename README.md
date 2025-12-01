@@ -5,9 +5,9 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 ## Web Application
 
 A Next.js web application that fetches and displays real-time rankings from:
-- **General**: LMArena general leaderboards
-- **Coding**: LMArena coding + SWE Bench bash-only
-- **Top Apps**: OpenRouter top apps (this week)
+- **General Intelligence**: Chatbot Arena Elo scores from openlm.ai
+- **Coding**: Chatbot Arena Coding scores + SWE-bench from openlm.ai
+- **Top Apps**: Link to OpenRouter rankings (live data)
 
 ### Setup
 
@@ -85,9 +85,9 @@ Flags:
 - Missing-in-source rank = max rank in that source + 1.
 - No tie-breaks (stable sort by average rank).
 
-Coding mode sources:
-- lmarena: Arena Overview Coding column and WebDev category.
-- openrouter: Leaderboard, Market Share (author-level), and Programming tables are each treated as distinct sources.
+Web app data sources:
+- **General**: openlm.ai Chatbot Arena overall Elo scores
+- **Coding**: openlm.ai Chatbot Arena Coding scores + SWE-bench verified scores
 
 ## Vendor Mapping
 

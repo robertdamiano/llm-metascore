@@ -11,4 +11,4 @@ export interface AggregatedEntry {
   aggregatedRank: number;
 }
 
-export type RankingMode = 'general' | 'coding' | 'apps';
+export type RankingMode = 'general' | 'coding';

@@ -1,9 +1,8 @@
 import { ModelEntry, AggregatedEntry } from './types';
 import { identifyCreator, ALLOWED_CREATORS } from './vendors';
 import { aggregateAverageRank } from './aggregation';
-import { fetchLMArenaGeneralSources, fetchLMArenaCodingSources } from './scrapers/lmarena';
-import { fetchSWEBenchBashOnly } from './scrapers/swebench';
-import { fetchOpenRouterTopApps } from './scrapers/openrouter';
+import { fetchOpenLMArena } from './scrapers/openlm-arena';
+import { fetchOpenLMSWEBench } from './scrapers/openlm-swebench';
 
 function bestByCreatorEntries(entries: ModelEntry[]): Array<[string, number]> {
   const creatorRanks = new Map<string, number>();
@@ -35,54 +34,39 @@ function bestByCreatorEntries(entries: ModelEntry[]): Array<[string, number]> {
 }
 
 export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
-  const sourcesRaw = await fetchLMArenaGeneralSources();
+  const sourcesRaw = await fetchOpenLMArena();
 
   const sources: Record<string, Array<[string, number]>> = {};
-  for (const [src, entries] of Object.entries(sourcesRaw)) {
-    if (entries.length > 0) {
-      sources[src] = bestByCreatorEntries(entries);
-    }
+
+  // Arena Elo overall ranking
+  const arenaEloEntries = sourcesRaw['openlm:arena:overall'];
+  if (arenaEloEntries && arenaEloEntries.length > 0) {
+    sources['openlm:arena:overall'] = bestByCreatorEntries(arenaEloEntries);
   }
 
   const aggregated = aggregateAverageRank(sources);
-
-  // Filter to only allowed creators
   return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
 }
 
 export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
-  const [arenaSources, sweBenchEntries] = await Promise.all([
-    fetchLMArenaCodingSources(),
-    fetchSWEBenchBashOnly(),
+  const [arenaSourcesRaw, sweBenchSourcesRaw] = await Promise.all([
+    fetchOpenLMArena(),
+    fetchOpenLMSWEBench(),
   ]);
 
   const sources: Record<string, Array<[string, number]>> = {};
 
-  // Add LMArena coding sources
-  for (const [src, entries] of Object.entries(arenaSources)) {
-    sources[src] = bestByCreatorEntries(entries);
+  // Arena Coding score
+  const codingEntries = arenaSourcesRaw['openlm:arena:coding'];
+  if (codingEntries && codingEntries.length > 0) {
+    sources['openlm:arena:coding'] = bestByCreatorEntries(codingEntries);
   }
 
-  // Add SWE Bench
-  if (sweBenchEntries.length > 0) {
-    sources['swebench:bash-only'] = bestByCreatorEntries(sweBenchEntries);
+  // SWE-bench verified score
+  const sweBenchEntries = sweBenchSourcesRaw['openlm:swebench'];
+  if (sweBenchEntries && sweBenchEntries.length > 0) {
+    sources['openlm:swebench'] = bestByCreatorEntries(sweBenchEntries);
   }
-
-  const aggregated = aggregateAverageRank(sources);
-
-  return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
-}
-
-export async function fetchTopAppsRankings(): Promise<AggregatedEntry[]> {
-  const entries = await fetchOpenRouterTopApps();
-
-  if (entries.length === 0) {
-    return [];
-  }
-
-  const sources: Record<string, Array<[string, number]>> = {
-    'openrouter:apps:this-week': bestByCreatorEntries(entries),
-  };
 
   const aggregated = aggregateAverageRank(sources);
 

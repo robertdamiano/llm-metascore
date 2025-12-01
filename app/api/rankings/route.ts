@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchGeneralRankings, fetchCodingRankings, fetchTopAppsRankings } from '@/lib/rankings';
+import { fetchGeneralRankings, fetchCodingRankings } from '@/lib/rankings';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,12 +15,9 @@ export async function GET(request: NextRequest) {
       case 'coding':
         rankings = await fetchCodingRankings();
         break;
-      case 'apps':
-        rankings = await fetchTopAppsRankings();
-        break;
       default:
         return NextResponse.json(
-          { error: 'Invalid mode. Must be: general, coding, or apps' },
+          { error: 'Invalid mode. Must be: general or coding' },
           { status: 400 }
         );
     }
