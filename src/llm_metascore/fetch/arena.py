@@ -45,11 +45,7 @@ def fetch_arena_general_sources() -> Dict[str, List[ModelEntry]]:
     categories = [
         "Text",
         "Vision",
-        "Text-to-Image",
-        "Image Edit",
         "Search",
-        "Text-to-Video",
-        "Image-to-Video",
     ]
     # Directly parse by section name
     for cat in categories:
@@ -129,6 +125,9 @@ def _parse_overview_columns_md(md: str, source_prefix: str) -> Dict[str, List[Mo
             continue
         for col_idx, cell in enumerate(r):
             if col_idx == name_idx:
+                continue
+            # Skip Rank column if present
+            if headers_lower[col_idx] == "rank":
                 continue
             digits = "".join(ch for ch in cell if ch.isdigit())
             if not digits:

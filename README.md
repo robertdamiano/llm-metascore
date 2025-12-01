@@ -74,10 +74,12 @@ llm-metascore --type coding --details
 ```
 
 Flags:
-- `--type`: `general` (lmarena only) or `coding` (lmarena + openrouter)
+- `--type`: 
+  - `general`: lmarena (Text, Vision, Search, and Arena Overview excluding Coding)
+  - `coding`: lmarena (WebDev, Arena Overview Coding) + live openlm.ai (SWE-bench)
 - `--details`: print aggregated average and per-source ranks
 
-**Note:** The Python CLI uses local Markdown snapshots from `data/.cache/`, while the web app fetches live data.
+**Note:** The Python CLI uses local Markdown snapshots from `data/.cache/` for Arena data, but fetches SWE-bench rankings live from openlm.ai.
 
 ## Aggregation Rules
 
@@ -85,9 +87,13 @@ Flags:
 - Missing-in-source rank = max rank in that source + 1.
 - No tie-breaks (stable sort by average rank).
 
-Web app data sources:
-- **General**: openlm.ai Chatbot Arena overall Elo scores
-- **Coding**: openlm.ai Chatbot Arena Coding scores + SWE-bench verified scores
+Data composition:
+- **General**: 
+    - Chatbot Arena: Text, Vision, Search
+    - Chatbot Arena Overview: All columns *except* Coding
+- **Coding**: 
+    - Chatbot Arena: WebDev, Overview (Coding column)
+    - OpenLM.ai: SWE-bench (Live fetch)
 
 ## Vendor Mapping
 

@@ -10,8 +10,10 @@
 - **Web app scrapers** (`lib/scrapers/openlm-*.ts`): fetch live data from openlm.ai (static HTML, no JS rendering)
   - `openlm-arena.ts`: Chatbot Arena overall and coding rankings
   - `openlm-swebench.ts`: SWE-bench benchmark scores
-- **Legacy CLI scrapers** (`lib/scrapers/lmarena.ts`, `swebench.ts`, `openrouter.ts`): preserved for Python CLI compatibility
-- **Python fetchers** (`src/llm_metascore/fetch/`): use cached Markdown snapshots in `data/.cache/`
+- **Legacy CLI scrapers** (`lib/scrapers/lmarena.ts`, `swebench.ts`): preserved for Python CLI compatibility.
+- **Python fetchers** (`src/llm_metascore/fetch/`): 
+  - `arena.py`: parses cached Markdown snapshots in `data/.cache/` for general and coding Arena scores.
+  - `openlm.py`: fetches live SWE-bench rankings from openlm.ai.
 - When updating web app data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, source}` structure
 
 ## Build, Test, and Development Commands

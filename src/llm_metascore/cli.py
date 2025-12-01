@@ -3,7 +3,7 @@ from __future__ import annotations
 import typer
 
 from .fetch.arena import fetch_arena_general_sources, fetch_arena_coding_sources
-from .fetch.openrouter import fetch_openrouter_coding_sources
+from .fetch.openlm import fetch_openlm_coding_sources
 from .core.aggregate import aggregate_average_rank
 from .core.vendors import identify_creator, ALLOWED_CREATORS
 
@@ -58,9 +58,9 @@ def top(
                 typer.echo(f"{i}. {e.name}")
         return
 
-    # coding: aggregate lmarena (overview coding + webdev) + openrouter coding
+    # coding: aggregate lmarena (overview coding + webdev) + openlm swe-bench
     arena_sources = fetch_arena_coding_sources()
-    openrouter_sources = fetch_openrouter_coding_sources()
+    openlm_sources = fetch_openlm_coding_sources()
     def best_by_creator_entries(entries):
         m: dict[str, int] = {}
         for e in entries:
@@ -79,7 +79,7 @@ def top(
         ]
 
     sources = {src: best_by_creator_entries(entries) for src, entries in arena_sources.items()}
-    for src, entries in openrouter_sources.items():
+    for src, entries in openlm_sources.items():
         sources[src] = best_by_creator_entries(entries)
     agg = aggregate_average_rank(sources)
     filtered = [e for e in agg if e.name in ALLOWED_CREATORS]
