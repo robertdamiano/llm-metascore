@@ -27,12 +27,8 @@ export async function fetchOpenRouterTopApps(): Promise<ModelEntry[]> {
     // This is a best-effort scraper and may need adjustment based on actual HTML
 
     // Look for tables in the page
-    $('table').each((tableIndex, table) => {
+    $('table').each((_tableIndex, table) => {
       const $table = $(table);
-
-      // Try to find if this is the apps table by looking at headers or nearby text
-      const tableContext = $table.prev('h1, h2, h3, h4').text().toLowerCase() +
-                          $table.prev().text().toLowerCase();
 
       // Parse all tables and we'll filter later
       $table.find('tbody tr, tr').each((index, row) => {
