@@ -30,7 +30,6 @@ tsconfig.tsbuildinfo
 
 # Firebase
 .firebase/
-.firebaserc
 *-firebase-adminsdk-*.json
 
 # Environment
