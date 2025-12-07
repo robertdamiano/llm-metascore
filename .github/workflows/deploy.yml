@@ -33,5 +33,8 @@ jobs:
         with:
           credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
 
+      - name: Enable Firebase Web Frameworks
+        run: npx firebase experiments:enable webframeworks
+
       - name: Deploy to Firebase
         run: npx firebase deploy
