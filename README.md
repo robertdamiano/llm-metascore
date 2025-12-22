@@ -5,7 +5,7 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 ## Web Application
 
 A Next.js web application that fetches and displays real-time rankings from:
-- **General Intelligence**: LMArena (Text, Vision, Search) + OpenLM.ai (AAII, MMLU-Pro, ARC-AGI)
+- **General Intelligence**: OpenLM.ai (Arena Overall, Vision, AAII, MMLU-Pro, ARC-AGI) + LMArena (Search)
 - **Coding**: LMArena (WebDev) + OpenLM.ai (Arena Coding, SWE-bench, IOI) + Vals.ai (Vibe Code)
 
 ### Setup
@@ -88,8 +88,8 @@ Firebase will automatically build and deploy your Next.js app with Cloud Functio
 
 All data is fetched live from static HTML (no headless browser required):
 
-- **lmarena.ai/leaderboard**: Text, Vision, Search, WebDev categories
-- **openlm.ai/chatbot-arena**: Arena Elo, Coding, AAII, MMLU-Pro, ARC-AGI
+- **lmarena.ai/leaderboard**: Search, WebDev categories
+- **openlm.ai/chatbot-arena**: Arena Overall, Vision, Coding, AAII, MMLU-Pro, ARC-AGI
 - **openlm.ai/swe-bench**: SWE-bench and IOI benchmarks
 - **vals.ai/benchmarks/vibe-code**: Vibe Code benchmark (top 3 models only)
 
@@ -102,8 +102,8 @@ All data is fetched live from static HTML (no headless browser required):
 
 Data composition:
 - **General Intelligence**:
-    - LMArena: Text, Vision, Search
-    - OpenLM.ai: AAII, MMLU-Pro, ARC-AGI
+    - OpenLM.ai: Arena Overall, Vision, AAII, MMLU-Pro, ARC-AGI
+    - LMArena: Search
 - **Coding**:
     - LMArena: WebDev
     - OpenLM.ai: Arena Coding, SWE-bench, IOI

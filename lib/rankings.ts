@@ -9,10 +9,10 @@ import { fetchValsAI } from './scrapers/vals';
 // Leaderboard definitions
 const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   name: 'General Intelligence',
-  description: 'Arena Elo (text/vision/search) + MMLU-Pro + ARC-AGI + AAII',
+  description: 'Arena Elo (overall/vision) + LMArena Search + MMLU-Pro + ARC-AGI + AAII',
   sources: [
-    'lmarena:text',
-    'lmarena:vision',
+    'openlm:arena:overall',
+    'openlm:arena:vision',
     'lmarena:search',
     'openlm:arena:aaii',
     'openlm:arena:mmlu-pro',

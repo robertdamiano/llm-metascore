@@ -14,8 +14,8 @@ export default function Home() {
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
     general: [
-      'lmarena:text',
-      'lmarena:vision',
+      'openlm:arena:overall',
+      'openlm:arena:vision',
       'lmarena:search',
       'openlm:arena:aaii',
       'openlm:arena:mmlu-pro',
