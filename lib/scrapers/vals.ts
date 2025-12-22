@@ -5,9 +5,39 @@ interface ValsScraperResult {
   'vals:vibe-code': ModelEntry[];
 }
 
+type ValsEntry = Omit<ModelEntry, 'rank'> & { rank?: number };
+
+function rankByScore(entries: ValsEntry[]): ModelEntry[] {
+  const scored = entries.filter(entry => typeof entry.score === 'number');
+  if (scored.length === 0) return [];
+
+  scored.sort((a, b) => {
+    const aVal = a.score ?? 0;
+    const bVal = b.score ?? 0;
+    if (bVal !== aVal) return bVal - aVal;
+    return a.name.localeCompare(b.name);
+  });
+
+  let lastScore: number | null = null;
+  let lastRank = 0;
+
+  return scored.map((entry, index) => {
+    const score = entry.score as number;
+    if (lastScore === null || score !== lastScore) {
+      lastRank = index + 1;
+      lastScore = score;
+    }
+
+    return {
+      ...entry,
+      rank: lastRank,
+    };
+  });
+}
+
 function parseValsVibeCode(html: string): ModelEntry[] {
   const $ = cheerio.load(html);
-  const entries: ModelEntry[] = [];
+  const entries: ValsEntry[] = [];
 
   // Look for text containing model names and percentages
   // Based on our WebFetch, the top 3 are in the static HTML
@@ -20,18 +50,15 @@ function parseValsVibeCode(html: string): ModelEntry[] {
     { name: 'Claude Sonnet 4.5 (Thinking)', pattern: /Claude\s*Sonnet\s*4\.5\s*\(Thinking\).*?(\d+\.\d+)%/ },
   ];
 
-  let rank = 1;
   for (const { name, pattern } of patterns) {
     const match = text.match(pattern);
     if (match) {
       const score = parseFloat(match[1]);
       entries.push({
         name,
-        rank,
         score,
         source: 'vals:vibe-code',
       });
-      rank++;
     }
   }
 
@@ -49,7 +76,6 @@ function parseValsVibeCode(html: string): ModelEntry[] {
         if (modelName && scoreMatch) {
           entries.push({
             name: modelName,
-            rank: index + 1,
             score: parseFloat(scoreMatch[1]),
             source: 'vals:vibe-code',
           });
@@ -58,7 +84,7 @@ function parseValsVibeCode(html: string): ModelEntry[] {
     });
   }
 
-  return entries;
+  return rankByScore(entries);
 }
 
 export async function fetchValsAI(): Promise<ValsScraperResult> {

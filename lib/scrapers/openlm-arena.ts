@@ -13,6 +13,42 @@ interface ArenaEntry {
   license: string;
 }
 
+function buildRankings(
+  entries: ArenaEntry[],
+  getValue: (entry: ArenaEntry) => number | null,
+  source: ModelEntry['source']
+): ModelEntry[] {
+  const scored = entries
+    .map(entry => ({ entry, value: getValue(entry) }))
+    .filter(item => item.value !== null);
+
+  if (scored.length === 0) return [];
+
+  scored.sort((a, b) => {
+    const aVal = a.value ?? 0;
+    const bVal = b.value ?? 0;
+    if (bVal !== aVal) return bVal - aVal;
+    return a.entry.name.localeCompare(b.entry.name);
+  });
+
+  let lastValue: number | null = null;
+  let lastRank = 0;
+
+  return scored.map((item, index) => {
+    const value = item.value as number;
+    if (lastValue === null || value !== lastValue) {
+      lastRank = index + 1;
+      lastValue = value;
+    }
+
+    return {
+      name: item.entry.name,
+      rank: lastRank,
+      source,
+    };
+  });
+}
+
 function parseNumber(text: string): number | null {
   const cleaned = text.replace(/[^0-9.-]/g, '');
   if (!cleaned || cleaned === '') return null;
@@ -78,79 +114,63 @@ export async function fetchOpenLMArena(): Promise<Record<string, ModelEntry[]>> 
 
     // Arena Elo Overall
     if (entries.length > 0) {
-      const arenaRankings = entries
-        .filter(e => e.arenaElo !== null)
-        .sort((a, b) => (b.arenaElo || 0) - (a.arenaElo || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:overall',
-        }));
-      sources['openlm:arena:overall'] = arenaRankings;
+      const arenaRankings = buildRankings(
+        entries,
+        entry => entry.arenaElo,
+        'openlm:arena:overall'
+      );
+      if (arenaRankings.length > 0) {
+        sources['openlm:arena:overall'] = arenaRankings;
+      }
     }
 
     // Coding rankings
-    const codingEntries = entries.filter(e => e.coding !== null);
-    if (codingEntries.length > 0) {
-      const codingRankings = codingEntries
-        .sort((a, b) => (b.coding || 0) - (a.coding || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:coding',
-        }));
+    const codingRankings = buildRankings(
+      entries,
+      entry => entry.coding,
+      'openlm:arena:coding'
+    );
+    if (codingRankings.length > 0) {
       sources['openlm:arena:coding'] = codingRankings;
     }
 
     // Vision rankings
-    const visionEntries = entries.filter(e => e.vision !== null);
-    if (visionEntries.length > 0) {
-      const visionRankings = visionEntries
-        .sort((a, b) => (b.vision || 0) - (a.vision || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:vision',
-        }));
+    const visionRankings = buildRankings(
+      entries,
+      entry => entry.vision,
+      'openlm:arena:vision'
+    );
+    if (visionRankings.length > 0) {
       sources['openlm:arena:vision'] = visionRankings;
     }
 
     // AAII rankings
-    const aaiiEntries = entries.filter(e => e.aaii !== null);
-    if (aaiiEntries.length > 0) {
-      const aaiiRankings = aaiiEntries
-        .sort((a, b) => (b.aaii || 0) - (a.aaii || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:aaii',
-        }));
+    const aaiiRankings = buildRankings(
+      entries,
+      entry => entry.aaii,
+      'openlm:arena:aaii'
+    );
+    if (aaiiRankings.length > 0) {
       sources['openlm:arena:aaii'] = aaiiRankings;
     }
 
     // MMLU-Pro rankings
-    const mmluProEntries = entries.filter(e => e.mmluPro !== null);
-    if (mmluProEntries.length > 0) {
-      const mmluProRankings = mmluProEntries
-        .sort((a, b) => (b.mmluPro || 0) - (a.mmluPro || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:mmlu-pro',
-        }));
+    const mmluProRankings = buildRankings(
+      entries,
+      entry => entry.mmluPro,
+      'openlm:arena:mmlu-pro'
+    );
+    if (mmluProRankings.length > 0) {
       sources['openlm:arena:mmlu-pro'] = mmluProRankings;
     }
 
     // ARC-AGI rankings
-    const arcAgiEntries = entries.filter(e => e.arcAgi !== null);
-    if (arcAgiEntries.length > 0) {
-      const arcAgiRankings = arcAgiEntries
-        .sort((a, b) => (b.arcAgi || 0) - (a.arcAgi || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:arena:arc-agi',
-        }));
+    const arcAgiRankings = buildRankings(
+      entries,
+      entry => entry.arcAgi,
+      'openlm:arena:arc-agi'
+    );
+    if (arcAgiRankings.length > 0) {
       sources['openlm:arena:arc-agi'] = arcAgiRankings;
     }
 

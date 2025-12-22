@@ -11,6 +11,42 @@ interface SWEBenchEntry {
   agent: string;
 }
 
+function buildRankings(
+  entries: SWEBenchEntry[],
+  getValue: (entry: SWEBenchEntry) => number | null,
+  source: ModelEntry['source']
+): ModelEntry[] {
+  const scored = entries
+    .map(entry => ({ entry, value: getValue(entry) }))
+    .filter(item => item.value !== null);
+
+  if (scored.length === 0) return [];
+
+  scored.sort((a, b) => {
+    const aVal = a.value ?? 0;
+    const bVal = b.value ?? 0;
+    if (bVal !== aVal) return bVal - aVal;
+    return a.entry.name.localeCompare(b.entry.name);
+  });
+
+  let lastValue: number | null = null;
+  let lastRank = 0;
+
+  return scored.map((item, index) => {
+    const value = item.value as number;
+    if (lastValue === null || value !== lastValue) {
+      lastRank = index + 1;
+      lastValue = value;
+    }
+
+    return {
+      name: item.entry.name,
+      rank: lastRank,
+      source,
+    };
+  });
+}
+
 function parseNumber(text: string): number | null {
   const cleaned = text.replace(/[^0-9.-]/g, '');
   if (!cleaned || cleaned === '') return null;
@@ -69,28 +105,22 @@ export async function fetchOpenLMSWEBench(): Promise<Record<string, ModelEntry[]
     const sources: Record<string, ModelEntry[]> = {};
 
     // SWE-bench rankings
-    const sweBenchEntries = entries.filter(e => e.sweBenchScore !== null);
-    if (sweBenchEntries.length > 0) {
-      const sweBenchRankings = sweBenchEntries
-        .sort((a, b) => (b.sweBenchScore || 0) - (a.sweBenchScore || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:swebench',
-        }));
+    const sweBenchRankings = buildRankings(
+      entries,
+      entry => entry.sweBenchScore,
+      'openlm:swebench'
+    );
+    if (sweBenchRankings.length > 0) {
       sources['openlm:swebench'] = sweBenchRankings;
     }
 
     // IOI rankings
-    const ioiEntries = entries.filter(e => e.ioiScore !== null);
-    if (ioiEntries.length > 0) {
-      const ioiRankings = ioiEntries
-        .sort((a, b) => (b.ioiScore || 0) - (a.ioiScore || 0))
-        .map((entry, index) => ({
-          name: entry.name,
-          rank: index + 1,
-          source: 'openlm:ioi',
-        }));
+    const ioiRankings = buildRankings(
+      entries,
+      entry => entry.ioiScore,
+      'openlm:ioi'
+    );
+    if (ioiRankings.length > 0) {
       sources['openlm:ioi'] = ioiRankings;
     }
 
