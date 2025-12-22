@@ -45,11 +45,18 @@ export default function Home() {
   };
 
   const formatSourceName = (source: string): string => {
-    // Remove 'openlm:' prefix and format nicely
     return source
-      .replace('openlm:arena:', 'Arena ')
-      .replace('openlm:', '')
+      .replace('openlm:arena:', 'OpenLM Arena ')
+      .replace('openlm:swebench', 'OpenLM SWE-bench')
+      .replace('openlm:ioi', 'OpenLM IOI')
+      .replace('openlm:', 'OpenLM ')
+      .replace('lmarena:', 'LMArena ')
+      .replace('vals:', 'Vals.ai ')
       .replace('swebench', 'SWE-bench')
+      .replace('aaii', 'AAII (Artificial Analysis)')
+      .replace('mmlu-pro', 'MMLU-Pro')
+      .replace('arc-agi', 'ARC-AGI')
+      .replace('webdev', 'WebDev')
       .replace('overall', 'Overall')
       .replace('coding', 'Coding');
   };
@@ -70,9 +77,9 @@ export default function Home() {
   const getModeDescription = () => {
     switch (mode) {
       case 'general':
-        return 'Rankings based on Chatbot Arena Elo scores';
+        return 'Rankings based on LMArena and OpenLM Arena benchmarks (including Artificial Analysis)';
       case 'coding':
-        return 'Rankings based on Chatbot Arena Coding and SWE-bench';
+        return 'Rankings based on LMArena WebDev, OpenLM Arena Coding, SWE-bench, IOI, and Vals.ai';
     }
   };
 
@@ -110,7 +117,7 @@ export default function Home() {
                 Welcome to LLM Metascore
               </h2>
               <p className="text-gray-600 mb-6">
-                Click below to load the latest rankings aggregated from Chatbot Arena and SWE-bench
+                Click below to load the latest rankings aggregated from LMArena, OpenLM, and Vals.ai
               </p>
               <button
                 onClick={fetchRankings}
@@ -247,7 +254,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>
-            Rankings aggregated from Chatbot Arena and SWE-bench leaderboards
+            Rankings aggregated from LMArena, OpenLM, and Vals.ai
           </p>
           <p className="mt-2">
             Tracking: Anthropic, Google, OpenAI, and xAI
