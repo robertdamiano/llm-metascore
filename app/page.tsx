@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AggregatedEntry, RankingMode } from '@/lib/types';
 
 export default function Home() {
@@ -30,7 +30,7 @@ export default function Home() {
     ],
   };
 
-  const fetchRankings = async (forceRefresh = false) => {
+  const fetchRankings = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
@@ -61,7 +61,11 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchRankings();
+  }, [fetchRankings]);
 
   const formatSourceName = (source: string): string => {
     return source
@@ -83,6 +87,8 @@ export default function Home() {
   const getCurrentRankings = () => {
     return mode === 'general' ? generalRankings : codingRankings;
   };
+
+  const hasAnyData = generalRankings.length > 0 || codingRankings.length > 0;
 
   const getMissingSources = (): string[] => {
     const rankings = getCurrentRankings();
@@ -138,21 +144,21 @@ export default function Home() {
         </header>
 
         {/* Initial Load State - Prominent CTA */}
-        {!lastUpdated && !loading && (
+        {!loading && !hasAnyData && (
           <div className="bg-white rounded-lg shadow-md p-8 mb-6 text-center">
             <div className="max-w-md mx-auto">
               <h2 className="text-xl font-semibold text-gray-900 mb-3">
                 Welcome to LLM Metascore
               </h2>
               <p className="text-gray-600 mb-6">
-                Click below to load the latest rankings aggregated from LMArena, OpenLM, and Vals.ai
+                Click below to refresh rankings aggregated from LMArena, OpenLM, and Vals.ai
               </p>
               <button
                 onClick={() => fetchRankings(true)}
                 disabled={loading}
                 className="w-full sm:w-auto px-8 py-4 bg-green-600 text-white rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none"
               >
-                Load Rankings
+                Refresh Rankings
               </button>
             </div>
           </div>
