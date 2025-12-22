@@ -53,48 +53,49 @@ function parseMarkdownTables(html: string): ParsedTable[] {
   return tables;
 }
 
-function parseOverviewColumn(tables: ParsedTable[], columnName: string): ModelEntry[] {
-  // Find "Arena Overview" or similar table
-  const overviewTable = tables.find(t =>
-    t.section.toLowerCase().includes('arena') &&
-    t.section.toLowerCase().includes('overview')
-  );
-
-  if (!overviewTable) {
-    return [];
-  }
-
-  const headersLower = overviewTable.headers.map(h => h.toLowerCase());
-  const nameIdx = headersLower.findIndex(h => h.includes('model'));
-  const colIdx = headersLower.findIndex(h => h === columnName.toLowerCase());
-
-  if (nameIdx === -1 || colIdx === -1) {
-    return [];
-  }
-
-  const entries: ModelEntry[] = [];
-  for (const row of overviewTable.rows) {
-    if (row.length <= Math.max(nameIdx, colIdx)) continue;
-
-    const name = row[nameIdx].trim();
-    const val = row[colIdx].trim();
-
-    if (!name) continue;
-
-    const digits = val.replace(/\D/g, '');
-    if (!digits) continue;
-
-    const rank = parseInt(digits, 10);
-    entries.push({
-      name,
-      rank,
-      source: `lmarena:overview:${columnName}`,
-    });
-  }
-
-  entries.sort((a, b) => a.rank - b.rank);
-  return entries;
-}
+// Unused - kept for potential future use
+// function parseOverviewColumn(tables: ParsedTable[], columnName: string): ModelEntry[] {
+//   // Find "Arena Overview" or similar table
+//   const overviewTable = tables.find(t =>
+//     t.section.toLowerCase().includes('arena') &&
+//     t.section.toLowerCase().includes('overview')
+//   );
+//
+//   if (!overviewTable) {
+//     return [];
+//   }
+//
+//   const headersLower = overviewTable.headers.map(h => h.toLowerCase());
+//   const nameIdx = headersLower.findIndex(h => h.includes('model'));
+//   const colIdx = headersLower.findIndex(h => h === columnName.toLowerCase());
+//
+//   if (nameIdx === -1 || colIdx === -1) {
+//     return [];
+//   }
+//
+//   const entries: ModelEntry[] = [];
+//   for (const row of overviewTable.rows) {
+//     if (row.length <= Math.max(nameIdx, colIdx)) continue;
+//
+//     const name = row[nameIdx].trim();
+//     const val = row[colIdx].trim();
+//
+//     if (!name) continue;
+//
+//     const digits = val.replace(/\D/g, '');
+//     if (!digits) continue;
+//
+//     const rank = parseInt(digits, 10);
+//     entries.push({
+//       name,
+//       rank,
+//       source: `lmarena:overview:${columnName}`,
+//     });
+//   }
+//
+//   entries.sort((a, b) => a.rank - b.rank);
+//   return entries;
+// }
 
 function parseCategoryLeaderboard(tables: ParsedTable[], category: string): ModelEntry[] {
   const table = tables.find(t =>
@@ -134,7 +135,7 @@ function parseCategoryLeaderboard(tables: ParsedTable[], category: string): Mode
   return entries;
 }
 
-export async function fetchLMArenaGeneralSources(): Promise<Record<string, ModelEntry[]>> {
+export async function fetchLMArenaAllSources(): Promise<Record<string, ModelEntry[]>> {
   try {
     const response = await fetch('https://lmarena.ai/leaderboard', {
       cache: 'no-store',
@@ -149,61 +150,31 @@ export async function fetchLMArenaGeneralSources(): Promise<Record<string, Model
 
     const sources: Record<string, ModelEntry[]> = {};
 
-    // Overview columns (excluding Coding)
-    const overviewColumns = ['Overall', 'Math', 'Hard Prompts', 'Instruction Following', 'Style Control'];
-    for (const col of overviewColumns) {
-      const entries = parseOverviewColumn(tables, col);
-      if (entries.length > 0) {
-        sources[`lmarena:overview:${col}`] = entries;
-      }
+    // Category leaderboards for general intelligence
+    const textEntries = parseCategoryLeaderboard(tables, 'Text');
+    if (textEntries.length > 0) {
+      sources['lmarena:text'] = textEntries.map(e => ({ ...e, source: 'lmarena:text' }));
     }
 
-    // Category leaderboards
-    const categories = ['Text', 'Vision', 'Text-to-Image', 'Image Edit', 'Search', 'Text-to-Video', 'Image-to-Video'];
-    for (const cat of categories) {
-      const entries = parseCategoryLeaderboard(tables, cat);
-      if (entries.length > 0) {
-        sources[`lmarena:${cat}`] = entries;
-      }
+    const visionEntries = parseCategoryLeaderboard(tables, 'Vision');
+    if (visionEntries.length > 0) {
+      sources['lmarena:vision'] = visionEntries.map(e => ({ ...e, source: 'lmarena:vision' }));
     }
 
-    return sources;
-  } catch (error) {
-    console.error('Error fetching LMArena general sources:', error);
-    return {};
-  }
-}
-
-export async function fetchLMArenaCodingSources(): Promise<Record<string, ModelEntry[]>> {
-  try {
-    const response = await fetch('https://lmarena.ai/leaderboard', {
-      cache: 'no-store',
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch LMArena: ${response.status}`);
+    const searchEntries = parseCategoryLeaderboard(tables, 'Search');
+    if (searchEntries.length > 0) {
+      sources['lmarena:search'] = searchEntries.map(e => ({ ...e, source: 'lmarena:search' }));
     }
 
-    const html = await response.text();
-    const tables = parseMarkdownTables(html);
-
-    const sources: Record<string, ModelEntry[]> = {};
-
-    // Overview Coding column
-    const codingEntries = parseOverviewColumn(tables, 'Coding');
-    if (codingEntries.length > 0) {
-      sources['lmarena:overview:Coding'] = codingEntries;
-    }
-
-    // WebDev category
+    // WebDev category for coding
     const webdevEntries = parseCategoryLeaderboard(tables, 'WebDev');
     if (webdevEntries.length > 0) {
-      sources['lmarena:WebDev'] = webdevEntries;
+      sources['lmarena:webdev'] = webdevEntries.map(e => ({ ...e, source: 'lmarena:webdev' }));
     }
 
     return sources;
   } catch (error) {
-    console.error('Error fetching LMArena coding sources:', error);
+    console.error('Error fetching LMArena sources:', error);
     return {};
   }
 }

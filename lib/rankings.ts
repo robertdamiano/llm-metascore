@@ -1,8 +1,38 @@
-import { ModelEntry, AggregatedEntry } from './types';
+import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig } from './types';
 import { identifyCreator, ALLOWED_CREATORS } from './vendors';
 import { aggregateAverageRank } from './aggregation';
 import { fetchOpenLMArena } from './scrapers/openlm-arena';
 import { fetchOpenLMSWEBench } from './scrapers/openlm-swebench';
+import { fetchLMArenaAllSources } from './scrapers/lmarena';
+import { fetchValsAI } from './scrapers/vals';
+
+// Leaderboard definitions
+const GENERAL_INTELLIGENCE: LeaderboardConfig = {
+  name: 'General Intelligence',
+  description: 'Arena Elo (text/vision/search) + MMLU-Pro + ARC-AGI + AAII',
+  sources: [
+    'lmarena:text',
+    'lmarena:vision',
+    'lmarena:search',
+    'openlm:arena:aaii',
+    'openlm:arena:mmlu-pro',
+    'openlm:arena:arc-agi',
+  ],
+  minLabsRequired: 3,
+};
+
+const CODING: LeaderboardConfig = {
+  name: 'Coding',
+  description: 'WebDev + Arena Coding + SWE-bench + IOI + Vibe Code',
+  sources: [
+    'lmarena:webdev',
+    'openlm:arena:coding',
+    'openlm:swebench',
+    'openlm:ioi',
+    'vals:vibe-code',
+  ],
+  minLabsRequired: 3,
+};
 
 function bestByCreatorEntries(entries: ModelEntry[]): Array<[string, number]> {
   const creatorRanks = new Map<string, number>();
@@ -33,42 +63,83 @@ function bestByCreatorEntries(entries: ModelEntry[]): Array<[string, number]> {
     });
 }
 
-export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
-  const sourcesRaw = await fetchOpenLMArena();
+// Filter sources that have representation from at least N of the 4 labs
+function filterSourcesByLabCoverage(
+  allSources: Record<string, ModelEntry[]>,
+  requiredSources: SourceKey[],
+  minLabs: number
+): Record<string, ModelEntry[]> {
+  const filtered: Record<string, ModelEntry[]> = {};
 
-  const sources: Record<string, Array<[string, number]>> = {};
+  for (const sourceKey of requiredSources) {
+    const entries = allSources[sourceKey];
+    if (!entries || entries.length === 0) continue;
 
-  // Arena Elo overall ranking
-  const arenaEloEntries = sourcesRaw['openlm:arena:overall'];
-  if (arenaEloEntries && arenaEloEntries.length > 0) {
-    sources['openlm:arena:overall'] = bestByCreatorEntries(arenaEloEntries);
+    // Count how many of the 4 labs are represented
+    const labsPresent = new Set<string>();
+    for (const entry of entries) {
+      const creator = identifyCreator(entry.name);
+      if (ALLOWED_CREATORS.has(creator)) {
+        labsPresent.add(creator);
+      }
+    }
+
+    if (labsPresent.size >= minLabs) {
+      filtered[sourceKey] = entries;
+    }
   }
 
-  const aggregated = aggregateAverageRank(sources);
+  return filtered;
+}
+
+export async function fetchAllSources(): Promise<Record<string, ModelEntry[]>> {
+  const [openlmArena, openlmSWE, lmarena, vals] = await Promise.all([
+    fetchOpenLMArena(),
+    fetchOpenLMSWEBench(),
+    fetchLMArenaAllSources(),
+    fetchValsAI(),
+  ]);
+
+  return {
+    ...openlmArena,
+    ...openlmSWE,
+    ...lmarena,
+    ...vals,
+  };
+}
+
+export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
+  const allSources = await fetchAllSources();
+
+  const validSources = filterSourcesByLabCoverage(
+    allSources,
+    GENERAL_INTELLIGENCE.sources,
+    GENERAL_INTELLIGENCE.minLabsRequired
+  );
+
+  const rankedSources: Record<string, Array<[string, number]>> = {};
+  for (const [key, entries] of Object.entries(validSources)) {
+    rankedSources[key] = bestByCreatorEntries(entries);
+  }
+
+  const aggregated = aggregateAverageRank(rankedSources);
   return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
 }
 
 export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
-  const [arenaSourcesRaw, sweBenchSourcesRaw] = await Promise.all([
-    fetchOpenLMArena(),
-    fetchOpenLMSWEBench(),
-  ]);
+  const allSources = await fetchAllSources();
 
-  const sources: Record<string, Array<[string, number]>> = {};
+  const validSources = filterSourcesByLabCoverage(
+    allSources,
+    CODING.sources,
+    CODING.minLabsRequired
+  );
 
-  // Arena Coding score
-  const codingEntries = arenaSourcesRaw['openlm:arena:coding'];
-  if (codingEntries && codingEntries.length > 0) {
-    sources['openlm:arena:coding'] = bestByCreatorEntries(codingEntries);
+  const rankedSources: Record<string, Array<[string, number]>> = {};
+  for (const [key, entries] of Object.entries(validSources)) {
+    rankedSources[key] = bestByCreatorEntries(entries);
   }
 
-  // SWE-bench verified score
-  const sweBenchEntries = sweBenchSourcesRaw['openlm:swebench'];
-  if (sweBenchEntries && sweBenchEntries.length > 0) {
-    sources['openlm:swebench'] = bestByCreatorEntries(sweBenchEntries);
-  }
-
-  const aggregated = aggregateAverageRank(sources);
-
+  const aggregated = aggregateAverageRank(rankedSources);
   return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
 }

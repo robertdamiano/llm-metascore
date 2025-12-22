@@ -5,95 +5,109 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 ## Web Application
 
 A Next.js web application that fetches and displays real-time rankings from:
-- **General Intelligence**: Chatbot Arena Elo scores from openlm.ai
-- **Coding**: Chatbot Arena Coding scores + SWE-bench from openlm.ai
-- **Top Apps**: Link to OpenRouter rankings (live data)
+- **General Intelligence**: LMArena (Text, Vision, Search) + OpenLM.ai (AAII, MMLU-Pro, ARC-AGI)
+- **Coding**: LMArena (WebDev) + OpenLM.ai (Arena Coding, SWE-bench, IOI) + Vals.ai (Vibe Code)
 
 ### Setup
 
 Install dependencies:
 ```bash
 npm install
+cd functions && npm install && cd ..
 ```
 
-### Development
+### Local Development
 
-Run the development server:
-```bash
-npm run dev
-```
+For local development, you need Firebase Admin credentials:
+
+1. **Copy the example env file**:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. **Get Firebase service account credentials**:
+   - Go to [Firebase Console](https://console.firebase.google.com) > Project Settings > Service Accounts
+   - Click "Generate New Private Key"
+   - Copy the entire JSON content
+
+3. **Add credentials to `.env.local`**:
+   ```bash
+   FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"llm-metascore",...}'
+   ```
+   (Paste the JSON as a single-line string)
+
+4. **Run the development server**:
+   ```bash
+   npm run dev
+   ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+**Note**: In production (Firebase/GCP), the app automatically uses Application Default Credentials - no env vars needed.
+
+### Caching with Firebase
+
+The app uses Firebase Firestore for caching rankings data:
+- **Scheduled refresh**: A Cloud Function runs daily at midnight UTC to refresh all rankings
+- **Cache TTL**: 24 hours
+- **API fallback**: If cache is empty or expired, the API fetches fresh data directly
+
+To deploy Firebase Functions:
+```bash
+cd functions
+npm install
+npm run build
+cd ..
+firebase deploy --only functions
+```
+
 ### Deploy to Firebase
 
-This app uses Next.js with API routes, which requires Firebase Web Frameworks support.
+This app uses Next.js with API routes and Cloud Functions for scheduled data refresh.
 
 1. **Authenticate with Firebase**:
    ```bash
    firebase login --no-localhost
    ```
 
-2. **Initialize Firebase Hosting** (if not already done):
+2. **Deploy Firestore rules** (first time):
    ```bash
-   firebase init hosting
-   # Select: Set up GitHub Action deploys? No
-   # Firebase will auto-detect Next.js and set up Web Frameworks
+   firebase deploy --only firestore:rules
    ```
 
-3. **Deploy**:
+3. **Deploy everything**:
    ```bash
    npm run firebase:deploy
    ```
 
-Firebase will automatically build and deploy your Next.js app with Cloud Functions for server-side rendering and API routes.
+Firebase will automatically build and deploy your Next.js app with Cloud Functions.
 
 **Note**: Your Firebase project must be on the Blaze (pay-as-you-go) plan to use Cloud Functions.
 
-## Python CLI (Legacy)
+## Data Sources
 
-The original Python CLI is still available in `src/llm_metascore/`.
+All data is fetched live from static HTML (no headless browser required):
 
-### Install
-
-```bash
-pip install -e .
-```
-
-### Usage
-
-```bash
-python -m llm_metascore.cli --type general
-python -m llm_metascore.cli --type coding --details
-```
-
-Or if installed:
-```bash
-llm-metascore --type general
-llm-metascore --type coding --details
-```
-
-Flags:
-- `--type`: 
-  - `general`: lmarena (Text, Vision, Search, and Arena Overview excluding Coding)
-  - `coding`: lmarena (WebDev, Arena Overview Coding) + live openlm.ai (SWE-bench)
-- `--details`: print aggregated average and per-source ranks
-
-**Note:** The Python CLI uses local Markdown snapshots from `data/.cache/` for Arena data, but fetches SWE-bench rankings live from openlm.ai.
+- **lmarena.ai/leaderboard**: Text, Vision, Search, WebDev categories
+- **openlm.ai/chatbot-arena**: Arena Elo, Coding, AAII, MMLU-Pro, ARC-AGI
+- **openlm.ai/swe-bench**: SWE-bench and IOI benchmarks
+- **vals.ai/benchmarks/vibe-code**: Vibe Code benchmark (top 3 models only)
 
 ## Aggregation Rules
 
 - Convert each source to best rank per creator using dense, tie‑preserving ranks; average ranks across sources.
+- **Lab coverage filter**: Only include benchmarks where at least 3 of 4 labs (OpenAI, Google, Anthropic, xAI) are represented.
 - Missing-in-source rank = max rank in that source + 1.
 - No tie-breaks (stable sort by average rank).
 
 Data composition:
-- **General**: 
-    - Chatbot Arena: Text, Vision, Search
-    - Chatbot Arena Overview: All columns *except* Coding
-- **Coding**: 
-    - Chatbot Arena: WebDev, Overview (Coding column)
-    - OpenLM.ai: SWE-bench (Live fetch)
+- **General Intelligence**:
+    - LMArena: Text, Vision, Search
+    - OpenLM.ai: AAII, MMLU-Pro, ARC-AGI
+- **Coding**:
+    - LMArena: WebDev
+    - OpenLM.ai: Arena Coding, SWE-bench, IOI
+    - Vals.ai: Vibe Code
 
 ## Vendor Mapping
 

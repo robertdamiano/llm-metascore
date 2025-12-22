@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rankings cache - read-only for all, write only via admin SDK
+    match /rankings_cache/{document=**} {
+      allow read: if true;
+      allow write: if false;  // Only via admin SDK in cloud functions
+    }
+
+    match /rankings_aggregated/{document=**} {
+      allow read: if true;
+      allow write: if false;  // Only via admin SDK in cloud functions
+    }
+  }
+}

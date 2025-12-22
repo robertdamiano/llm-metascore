@@ -20,6 +20,9 @@ const eslintConfig = [
       "*.config.js",
       "*.config.mjs",
       "next-env.d.ts",
+      "functions/dist/**",
+      "functions/lib/**",
+      "functions/build.js",
     ],
   },
   {

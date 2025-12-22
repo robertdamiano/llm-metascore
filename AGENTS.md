@@ -3,26 +3,25 @@
 ## Project Structure & Modules
 - Next.js app lives in `app/` (`app/page.tsx` UI, `app/api/rankings/route.ts` API, global styles in `app/globals.css`). Tailwind is configured via `tailwind.config.js`.
 - Shared logic sits in `lib/` (`lib/rankings.ts` aggregation orchestration, `lib/aggregation.ts`, vendor mapping in `lib/vendors.ts`, scrapers under `lib/scrapers/`).
-- Cached Markdown snapshots for the legacy CLI live in `data/.cache/`; keep filenames date-stamped as already present.
-- Legacy Typer-based CLI code is in `src/llm_metascore/` (entrypoint `cli.py`, aggregation in `core/`, fetchers in `fetch/`).
+- Firebase Cloud Functions in `functions/` (`functions/src/index.ts` scheduled cache refresh).
 
 ## Data Sources & Scrapers
-- **Web app scrapers** (`lib/scrapers/openlm-*.ts`): fetch live data from openlm.ai (static HTML, no JS rendering)
-  - `openlm-arena.ts`: Chatbot Arena overall and coding rankings
-  - `openlm-swebench.ts`: SWE-bench benchmark scores
-- **Legacy CLI scrapers** (`lib/scrapers/lmarena.ts`, `swebench.ts`): preserved for Python CLI compatibility.
-- **Python fetchers** (`src/llm_metascore/fetch/`): 
-  - `arena.py`: parses cached Markdown snapshots in `data/.cache/` for general and coding Arena scores.
-  - `openlm.py`: fetches live SWE-bench rankings from openlm.ai.
-- When updating web app data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, source}` structure
+- **All scrapers** (`lib/scrapers/*.ts`): fetch live data from static HTML (no JS rendering needed)
+  - `openlm-arena.ts`: OpenLM.ai Arena Elo, Coding, Vision, AAII, MMLU-Pro, ARC-AGI
+  - `openlm-swebench.ts`: OpenLM.ai SWE-bench and IOI benchmarks
+  - `lmarena.ts`: LMArena Text, Vision, Search, WebDev categories
+  - `vals.ts`: Vals.ai Vibe Code benchmark (top 3 models only)
+- When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
+- All scrapers are imported by `lib/rankings.ts` which orchestrates fetching and aggregation
 
 ## Build, Test, and Development Commands
-- Install deps: `npm install`
+- Install deps: `npm install` (root) and `cd functions && npm install` (functions)
 - Local dev: `npm run dev` (Next.js at http://localhost:3000)
 - Type check & lint: `npm run lint` (Next/ESLint, TypeScript strict)
 - Production build & serve: `npm run build` then `npm run start`
 - Deploy to Firebase: `npm run firebase:deploy` (requires `firebase login`)
-- Legacy CLI: `pip install -e .` then `python -m llm_metascore.cli --type general|coding [--details]` (reads `data/.cache/`)
+- Deploy functions only: `firebase deploy --only functions`
+- Deploy Firestore rules: `firebase deploy --only firestore:rules`
 
 ## Coding Style & Naming Conventions
 - TypeScript: 2-space indentation; keep types explicit for props/return values; prefer `async/await`; use the `@/*` path alias. Keep client/server component boundaries explicit (add `'use client'` only when hooks are used).
