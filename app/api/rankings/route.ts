@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert, applicationDefault } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { fetchGeneralRankings, fetchCodingRankings } from '@/lib/rankings';
 
 // Initialize Firebase Admin (if not already)
@@ -48,6 +48,23 @@ async function getRankingsFromCache(mode: string) {
   }
 }
 
+async function writeRankingsToCache(mode: string, rankings: unknown) {
+  try {
+    const now = Timestamp.now();
+    const ttlSeconds = 24 * 60 * 60;
+    const expiresAt = Timestamp.fromMillis(now.toMillis() + ttlSeconds * 1000);
+
+    await db.collection('rankings_aggregated').doc(mode).set({
+      mode,
+      rankings,
+      fetchedAt: now,
+      expiresAt,
+    });
+  } catch (error) {
+    console.error('Error writing to cache:', error);
+  }
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const mode = searchParams.get('mode') || 'general';
@@ -84,6 +101,8 @@ export async function GET(request: NextRequest) {
         cached: false,
         fetchedAt: new Date().toISOString(),
       };
+
+      await writeRankingsToCache(mode, rankings);
     }
 
     return NextResponse.json({

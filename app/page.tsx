@@ -12,15 +12,34 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showDetails, setShowDetails] = useState(false);
 
-  const fetchRankings = async () => {
+  const expectedSourcesByMode: Record<RankingMode, string[]> = {
+    general: [
+      'lmarena:text',
+      'lmarena:vision',
+      'lmarena:search',
+      'openlm:arena:aaii',
+      'openlm:arena:mmlu-pro',
+      'openlm:arena:arc-agi',
+    ],
+    coding: [
+      'lmarena:webdev',
+      'openlm:arena:coding',
+      'openlm:swebench',
+      'openlm:ioi',
+      'vals:vibe-code',
+    ],
+  };
+
+  const fetchRankings = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
 
     try {
+      const refreshQuery = forceRefresh ? '&refresh=true' : '';
       // Fetch both general and coding rankings
       const [generalRes, codingRes] = await Promise.all([
-        fetch('/api/rankings?mode=general'),
-        fetch('/api/rankings?mode=coding')
+        fetch(`/api/rankings?mode=general${refreshQuery}`),
+        fetch(`/api/rankings?mode=coding${refreshQuery}`)
       ]);
 
       if (!generalRes.ok || !codingRes.ok) {
@@ -63,6 +82,15 @@ export default function Home() {
 
   const getCurrentRankings = () => {
     return mode === 'general' ? generalRankings : codingRankings;
+  };
+
+  const getMissingSources = (): string[] => {
+    const rankings = getCurrentRankings();
+    if (rankings.length === 0) return [];
+
+    const present = new Set(Object.keys(rankings[0]?.ranks ?? {}));
+    const expected = expectedSourcesByMode[mode];
+    return expected.filter(source => !present.has(source));
   };
 
   const getModeTitle = () => {
@@ -120,7 +148,7 @@ export default function Home() {
                 Click below to load the latest rankings aggregated from LMArena, OpenLM, and Vals.ai
               </p>
               <button
-                onClick={fetchRankings}
+                onClick={() => fetchRankings(true)}
                 disabled={loading}
                 className="w-full sm:w-auto px-8 py-4 bg-green-600 text-white rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors shadow-lg hover:shadow-xl transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none"
               >
@@ -162,7 +190,7 @@ export default function Home() {
 
               {/* Refresh Button */}
               <button
-                onClick={fetchRankings}
+                onClick={() => fetchRankings(true)}
                 disabled={loading}
                 className="px-5 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
@@ -176,6 +204,11 @@ export default function Home() {
             <p className="text-sm text-gray-600 mt-4">
               {getModeDescription()}
             </p>
+            {getMissingSources().length > 0 && (
+              <p className="text-xs text-amber-700 mt-2">
+                Partial data: missing {getMissingSources().map(formatSourceName).join(', ')}
+              </p>
+            )}
 
             {lastUpdated && (
               <p className="text-xs text-gray-500 mt-2">
