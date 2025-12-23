@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { fetchGeneralRankings, fetchCodingRankings } from '@/lib/rankings';
+import {
+  fetchAllSources,
+  buildGeneralRankings,
+  buildCodingRankings,
+} from '@/lib/rankings';
+import { ModelEntry } from '@/lib/types';
 
 // Initialize Firebase Admin (if not already)
 if (!getApps().length) {
@@ -109,6 +114,43 @@ async function getSourceTimestamps(mode?: string): Promise<Record<string, string
   }
 }
 
+function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry[] {
+  const merged = new Map<string, ModelEntry>();
+  const normalize = (name: string) => name.trim().toLowerCase();
+
+  for (const entry of existing) {
+    if (!entry?.name) continue;
+    merged.set(normalize(entry.name), entry);
+  }
+
+  for (const entry of incoming) {
+    if (!entry?.name) continue;
+    merged.set(normalize(entry.name), entry);
+  }
+
+  return Array.from(merged.values());
+}
+
+async function mergeCachedVals(
+  allSources: Record<string, ModelEntry[]>
+): Promise<Record<string, ModelEntry[]>> {
+  const liveVals = allSources['vals:vibe-code'] ?? [];
+  const doc = await db.collection('rankings_cache').doc('vals:vibe-code').get();
+  const cachedVals = doc.exists ? ((doc.data()?.entries ?? []) as ModelEntry[]) : [];
+
+  if (cachedVals.length === 0 && liveVals.length === 0) {
+    return allSources;
+  }
+
+  const mergedVals =
+    cachedVals.length === 0 ? liveVals : mergeByName(cachedVals, liveVals);
+
+  return {
+    ...allSources,
+    'vals:vibe-code': mergedVals,
+  };
+}
+
 async function writeRankingsToCache(mode: string, rankings: unknown) {
   try {
     const now = Timestamp.now();
@@ -141,14 +183,15 @@ export async function GET(request: NextRequest) {
 
     if (!result) {
       // Cache miss or expired - fetch fresh data
+      const mergedSources = await mergeCachedVals(await fetchAllSources());
       let rankings;
 
       switch (mode) {
         case 'general':
-          rankings = await fetchGeneralRankings();
+          rankings = buildGeneralRankings(mergedSources);
           break;
         case 'coding':
-          rankings = await fetchCodingRankings();
+          rankings = buildCodingRankings(mergedSources);
           break;
         default:
           return NextResponse.json(
