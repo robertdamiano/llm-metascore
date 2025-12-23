@@ -29,24 +29,63 @@ function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry
   return Array.from(merged.values());
 }
 
-async function mergeCachedVals(
+const SOURCES_PER_MODE: Record<string, string[]> = {
+  general: [
+    'openlm:arena:overall',
+    'openlm:arena:vision',
+    'lmarena:search',
+    'openlm:arena:aaii',
+    'openlm:arena:mmlu-pro',
+    'openlm:arena:arc-agi',
+  ],
+  coding: [
+    'lmarena:webdev',
+    'openlm:arena:coding',
+    'openlm:swebench',
+    'openlm:ioi',
+    'vals:vibe-code',
+  ],
+};
+
+const ALL_SOURCES = Array.from(
+  new Set([...SOURCES_PER_MODE.general, ...SOURCES_PER_MODE.coding])
+);
+
+async function mergeCachedSources(
   allSources: Record<string, ModelEntry[]>
 ): Promise<Record<string, ModelEntry[]>> {
-  const liveVals = allSources['vals:vibe-code'] ?? [];
-  const doc = await db.collection('rankings_cache').doc('vals:vibe-code').get();
-  const cachedVals = doc.exists ? ((doc.data()?.entries ?? []) as ModelEntry[]) : [];
+  if (ALL_SOURCES.length === 0) return allSources;
 
-  if (cachedVals.length === 0 && liveVals.length === 0) {
-    return allSources;
+  const refs = ALL_SOURCES.map(source => db.collection('rankings_cache').doc(source));
+  const docs = await db.getAll(...refs);
+  const cachedBySource = new Map<string, ModelEntry[]>();
+
+  docs.forEach(doc => {
+    if (!doc.exists) return;
+    const entries = (doc.data()?.entries ?? []) as ModelEntry[];
+    if (entries.length > 0) {
+      cachedBySource.set(doc.id, entries);
+    }
+  });
+
+  const mergedSources = { ...allSources };
+  for (const source of ALL_SOURCES) {
+    const liveEntries = mergedSources[source] ?? [];
+    const cachedEntries = cachedBySource.get(source) ?? [];
+
+    if (source === 'vals:vibe-code') {
+      if (cachedEntries.length > 0) {
+        mergedSources[source] = mergeByName(cachedEntries, liveEntries);
+      }
+      continue;
+    }
+
+    if (liveEntries.length === 0 && cachedEntries.length > 0) {
+      mergedSources[source] = cachedEntries;
+    }
   }
 
-  const mergedVals =
-    cachedVals.length === 0 ? liveVals : mergeByName(cachedVals, liveVals);
-
-  return {
-    ...allSources,
-    'vals:vibe-code': mergedVals,
-  };
+  return mergedSources;
 }
 
 // Scheduled function: runs daily at midnight UTC
@@ -59,7 +98,7 @@ export const refreshRankingsCache = functions.pubsub
     try {
       // Fetch all raw sources - returns a Record with sources and errors
       const allSources = await fetchAllSources();
-      const mergedSources = await mergeCachedVals(allSources);
+      const mergedSources = await mergeCachedSources(allSources);
       const now = admin.firestore.Timestamp.now();
       const ttlSeconds = 24 * 60 * 60; // 24 hours
       const expiresAt = admin.firestore.Timestamp.fromMillis(
@@ -129,8 +168,8 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
 
   try {
     // Fetch all raw sources
-    const allSources = await fetchAllSources();
-    const mergedSources = await mergeCachedVals(allSources);
+      const allSources = await fetchAllSources();
+      const mergedSources = await mergeCachedSources(allSources);
     const now = admin.firestore.Timestamp.now();
     const ttlSeconds = 24 * 60 * 60;
     const expiresAt = admin.firestore.Timestamp.fromMillis(

@@ -59,29 +59,10 @@ async function getRankingsFromCache(mode: string) {
 
 async function getSourceTimestamps(mode?: string): Promise<Record<string, string>> {
   try {
-    // Define which sources we need per mode to avoid full collection scan
-    const sourcesPerMode: Record<string, string[]> = {
-      general: [
-        'openlm:arena:overall',
-        'openlm:arena:vision',
-        'lmarena:search',
-        'openlm:arena:aaii',
-        'openlm:arena:mmlu-pro',
-        'openlm:arena:arc-agi',
-      ],
-      coding: [
-        'lmarena:webdev',
-        'openlm:arena:coding',
-        'openlm:swebench',
-        'openlm:ioi',
-        'vals:vibe-code',
-      ],
-    };
-
     const timestamps: Record<string, string> = {};
 
     // If mode is specified, only fetch timestamps for sources in that mode
-    const sourcesToFetch = mode ? sourcesPerMode[mode] || [] : [];
+    const sourcesToFetch = mode ? SOURCES_PER_MODE[mode] || [] : [];
 
     if (sourcesToFetch.length > 0) {
       // Batch get specific documents instead of scanning entire collection
@@ -114,6 +95,24 @@ async function getSourceTimestamps(mode?: string): Promise<Record<string, string
   }
 }
 
+const SOURCES_PER_MODE: Record<string, string[]> = {
+  general: [
+    'openlm:arena:overall',
+    'openlm:arena:vision',
+    'lmarena:search',
+    'openlm:arena:aaii',
+    'openlm:arena:mmlu-pro',
+    'openlm:arena:arc-agi',
+  ],
+  coding: [
+    'lmarena:webdev',
+    'openlm:arena:coding',
+    'openlm:swebench',
+    'openlm:ioi',
+    'vals:vibe-code',
+  ],
+};
+
 function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry[] {
   const merged = new Map<string, ModelEntry>();
   const normalize = (name: string) => name.trim().toLowerCase();
@@ -131,24 +130,43 @@ function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry
   return Array.from(merged.values());
 }
 
-async function mergeCachedVals(
-  allSources: Record<string, ModelEntry[]>
+async function mergeCachedSources(
+  allSources: Record<string, ModelEntry[]>,
+  mode: string
 ): Promise<Record<string, ModelEntry[]>> {
-  const liveVals = allSources['vals:vibe-code'] ?? [];
-  const doc = await db.collection('rankings_cache').doc('vals:vibe-code').get();
-  const cachedVals = doc.exists ? ((doc.data()?.entries ?? []) as ModelEntry[]) : [];
+  const sources = SOURCES_PER_MODE[mode] || [];
+  if (sources.length === 0) return allSources;
 
-  if (cachedVals.length === 0 && liveVals.length === 0) {
-    return allSources;
+  const refs = sources.map(source => db.collection('rankings_cache').doc(source));
+  const docs = await db.getAll(...refs);
+  const cachedBySource = new Map<string, ModelEntry[]>();
+
+  docs.forEach(doc => {
+    if (!doc.exists) return;
+    const entries = (doc.data()?.entries ?? []) as ModelEntry[];
+    if (entries.length > 0) {
+      cachedBySource.set(doc.id, entries);
+    }
+  });
+
+  const mergedSources = { ...allSources };
+  for (const source of sources) {
+    const liveEntries = mergedSources[source] ?? [];
+    const cachedEntries = cachedBySource.get(source) ?? [];
+
+    if (source === 'vals:vibe-code') {
+      if (cachedEntries.length > 0) {
+        mergedSources[source] = mergeByName(cachedEntries, liveEntries);
+      }
+      continue;
+    }
+
+    if (liveEntries.length === 0 && cachedEntries.length > 0) {
+      mergedSources[source] = cachedEntries;
+    }
   }
 
-  const mergedVals =
-    cachedVals.length === 0 ? liveVals : mergeByName(cachedVals, liveVals);
-
-  return {
-    ...allSources,
-    'vals:vibe-code': mergedVals,
-  };
+  return mergedSources;
 }
 
 async function writeRankingsToCache(mode: string, rankings: unknown) {
@@ -183,16 +201,19 @@ export async function GET(request: NextRequest) {
 
     if (!result) {
       // Cache miss or expired - fetch fresh data
-      const mergedSources = await mergeCachedVals(await fetchAllSources());
+      const allSources = await fetchAllSources();
+      const mergedSources = await mergeCachedSources(allSources, mode);
       let rankings;
 
       switch (mode) {
-        case 'general':
+        case 'general': {
           rankings = buildGeneralRankings(mergedSources);
           break;
-        case 'coding':
+        }
+        case 'coding': {
           rankings = buildCodingRankings(mergedSources);
           break;
+        }
         default:
           return NextResponse.json(
             { error: 'Invalid mode. Must be: general or coding' },
