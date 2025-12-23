@@ -111,6 +111,18 @@ export async function fetchAllSources(): Promise<Record<string, ModelEntry[]>> {
 export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
   const allSources = await fetchAllSources();
 
+  return buildGeneralRankings(allSources);
+}
+
+export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
+  const allSources = await fetchAllSources();
+
+  return buildCodingRankings(allSources);
+}
+
+export function buildGeneralRankings(
+  allSources: Record<string, ModelEntry[]>
+): AggregatedEntry[] {
   const validSources = filterSourcesByLabCoverage(
     allSources,
     GENERAL_INTELLIGENCE.sources,
@@ -126,9 +138,9 @@ export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
   return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
 }
 
-export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
-  const allSources = await fetchAllSources();
-
+export function buildCodingRankings(
+  allSources: Record<string, ModelEntry[]>
+): AggregatedEntry[] {
   const validSources = filterSourcesByLabCoverage(
     allSources,
     CODING.sources,

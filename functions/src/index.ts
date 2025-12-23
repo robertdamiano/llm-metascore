@@ -9,8 +9,45 @@ const db = admin.firestore();
 
 // Import scraper functions - we need to compile lib/ scrapers or duplicate them
 // For now, we'll import the TypeScript files directly and handle compilation
-import { fetchAllSources } from '../../lib/rankings';
-import { fetchGeneralRankings, fetchCodingRankings } from '../../lib/rankings';
+import { fetchAllSources, buildGeneralRankings, buildCodingRankings } from '../../lib/rankings';
+import { ModelEntry } from '../../lib/types';
+
+function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry[] {
+  const merged = new Map<string, ModelEntry>();
+  const normalize = (name: string) => name.trim().toLowerCase();
+
+  for (const entry of existing) {
+    if (!entry?.name) continue;
+    merged.set(normalize(entry.name), entry);
+  }
+
+  for (const entry of incoming) {
+    if (!entry?.name) continue;
+    merged.set(normalize(entry.name), entry);
+  }
+
+  return Array.from(merged.values());
+}
+
+async function mergeCachedVals(
+  allSources: Record<string, ModelEntry[]>
+): Promise<Record<string, ModelEntry[]>> {
+  const liveVals = allSources['vals:vibe-code'] ?? [];
+  const doc = await db.collection('rankings_cache').doc('vals:vibe-code').get();
+  const cachedVals = doc.exists ? ((doc.data()?.entries ?? []) as ModelEntry[]) : [];
+
+  if (cachedVals.length === 0 && liveVals.length === 0) {
+    return allSources;
+  }
+
+  const mergedVals =
+    cachedVals.length === 0 ? liveVals : mergeByName(cachedVals, liveVals);
+
+  return {
+    ...allSources,
+    'vals:vibe-code': mergedVals,
+  };
+}
 
 // Scheduled function: runs daily at midnight UTC
 export const refreshRankingsCache = functions.pubsub
@@ -22,6 +59,7 @@ export const refreshRankingsCache = functions.pubsub
     try {
       // Fetch all raw sources - returns a Record with sources and errors
       const allSources = await fetchAllSources();
+      const mergedSources = await mergeCachedVals(allSources);
       const now = admin.firestore.Timestamp.now();
       const ttlSeconds = 24 * 60 * 60; // 24 hours
       const expiresAt = admin.firestore.Timestamp.fromMillis(
@@ -32,7 +70,7 @@ export const refreshRankingsCache = functions.pubsub
       let successCount = 0;
 
       // Cache individual sources - only update successful fetches
-      for (const [source, entries] of Object.entries(allSources)) {
+      for (const [source, entries] of Object.entries(mergedSources)) {
         // Skip if entries is empty or null (failed fetch)
         if (!entries || entries.length === 0) {
           console.warn(`Skipping empty source: ${source}`);
@@ -50,13 +88,11 @@ export const refreshRankingsCache = functions.pubsub
       }
 
       await batch.commit();
-      console.log(`Successfully cached ${successCount}/${Object.keys(allSources).length} sources`);
+      console.log(`Successfully cached ${successCount}/${Object.keys(mergedSources).length} sources`);
 
       // Now compute and cache aggregated rankings
-      const [generalRankings, codingRankings] = await Promise.all([
-        fetchGeneralRankings(),
-        fetchCodingRankings(),
-      ]);
+      const generalRankings = buildGeneralRankings(mergedSources);
+      const codingRankings = buildCodingRankings(mergedSources);
 
       const aggregatedBatch = db.batch();
 
@@ -94,6 +130,7 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
   try {
     // Fetch all raw sources
     const allSources = await fetchAllSources();
+    const mergedSources = await mergeCachedVals(allSources);
     const now = admin.firestore.Timestamp.now();
     const ttlSeconds = 24 * 60 * 60;
     const expiresAt = admin.firestore.Timestamp.fromMillis(
@@ -105,7 +142,7 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
     const failedSources: string[] = [];
 
     // Only update successful fetches
-    for (const [source, entries] of Object.entries(allSources)) {
+    for (const [source, entries] of Object.entries(mergedSources)) {
       if (!entries || entries.length === 0) {
         console.warn(`Skipping empty source: ${source}`);
         failedSources.push(source);
@@ -125,10 +162,8 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
     await batch.commit();
 
     // Compute and cache aggregated rankings
-    const [generalRankings, codingRankings] = await Promise.all([
-      fetchGeneralRankings(),
-      fetchCodingRankings(),
-    ]);
+    const generalRankings = buildGeneralRankings(mergedSources);
+    const codingRankings = buildCodingRankings(mergedSources);
 
     const aggregatedBatch = db.batch();
 
@@ -151,7 +186,7 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
     res.status(200).json({
       success: true,
       sourceCount: successCount,
-      totalSources: Object.keys(allSources).length,
+      totalSources: Object.keys(mergedSources).length,
       failedSources,
       timestamp: now.toDate().toISOString(),
     });
