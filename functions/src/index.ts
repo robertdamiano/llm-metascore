@@ -20,7 +20,7 @@ export const refreshRankingsCache = functions.pubsub
     console.log('Starting daily rankings cache refresh');
 
     try {
-      // Fetch all raw sources
+      // Fetch all raw sources - returns a Record with sources and errors
       const allSources = await fetchAllSources();
       const now = admin.firestore.Timestamp.now();
       const ttlSeconds = 24 * 60 * 60; // 24 hours
@@ -29,9 +29,16 @@ export const refreshRankingsCache = functions.pubsub
       );
 
       const batch = db.batch();
+      let successCount = 0;
 
-      // Cache individual sources
+      // Cache individual sources - only update successful fetches
       for (const [source, entries] of Object.entries(allSources)) {
+        // Skip if entries is empty or null (failed fetch)
+        if (!entries || entries.length === 0) {
+          console.warn(`Skipping empty source: ${source}`);
+          continue;
+        }
+
         const docRef = db.collection('rankings_cache').doc(source);
         batch.set(docRef, {
           source,
@@ -39,10 +46,11 @@ export const refreshRankingsCache = functions.pubsub
           fetchedAt: now,
           expiresAt,
         });
+        successCount++;
       }
 
       await batch.commit();
-      console.log(`Successfully cached ${Object.keys(allSources).length} sources`);
+      console.log(`Successfully cached ${successCount}/${Object.keys(allSources).length} sources`);
 
       // Now compute and cache aggregated rankings
       const [generalRankings, codingRankings] = await Promise.all([
@@ -93,8 +101,17 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
     );
 
     const batch = db.batch();
+    let successCount = 0;
+    const failedSources: string[] = [];
 
+    // Only update successful fetches
     for (const [source, entries] of Object.entries(allSources)) {
+      if (!entries || entries.length === 0) {
+        console.warn(`Skipping empty source: ${source}`);
+        failedSources.push(source);
+        continue;
+      }
+
       const docRef = db.collection('rankings_cache').doc(source);
       batch.set(docRef, {
         source,
@@ -102,6 +119,7 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
         fetchedAt: now,
         expiresAt,
       });
+      successCount++;
     }
 
     await batch.commit();
@@ -132,7 +150,9 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
 
     res.status(200).json({
       success: true,
-      sourceCount: Object.keys(allSources).length,
+      sourceCount: successCount,
+      totalSources: Object.keys(allSources).length,
+      failedSources,
       timestamp: now.toDate().toISOString(),
     });
   } catch (error) {

@@ -37,14 +37,75 @@ async function getRankingsFromCache(mode: string) {
       return null; // Cache expired
     }
 
+    // Fetch per-source timestamps from rankings_cache (only for this mode)
+    const sourceTimestamps = await getSourceTimestamps(mode);
+
     return {
       rankings: data?.rankings,
       cached: true,
       fetchedAt: data?.fetchedAt?.toDate().toISOString(),
+      sourceTimestamps,
     };
   } catch (error) {
     console.error('Error reading from cache:', error);
     return null;
+  }
+}
+
+async function getSourceTimestamps(mode?: string): Promise<Record<string, string>> {
+  try {
+    // Define which sources we need per mode to avoid full collection scan
+    const sourcesPerMode: Record<string, string[]> = {
+      general: [
+        'openlm:arena:overall',
+        'openlm:arena:vision',
+        'lmarena:search',
+        'openlm:arena:aaii',
+        'openlm:arena:mmlu-pro',
+        'openlm:arena:arc-agi',
+      ],
+      coding: [
+        'lmarena:webdev',
+        'openlm:arena:coding',
+        'openlm:swebench',
+        'openlm:ioi',
+        'vals:vibe-code',
+      ],
+    };
+
+    const timestamps: Record<string, string> = {};
+
+    // If mode is specified, only fetch timestamps for sources in that mode
+    const sourcesToFetch = mode ? sourcesPerMode[mode] || [] : [];
+
+    if (sourcesToFetch.length > 0) {
+      // Batch get specific documents instead of scanning entire collection
+      const refs = sourcesToFetch.map(source => db.collection('rankings_cache').doc(source));
+      const docs = await db.getAll(...refs);
+
+      docs.forEach(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data?.fetchedAt) {
+            timestamps[doc.id] = data.fetchedAt.toDate().toISOString();
+          }
+        }
+      });
+    } else {
+      // Fallback: scan entire collection (for backward compatibility)
+      const snapshot = await db.collection('rankings_cache').get();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data?.fetchedAt) {
+          timestamps[doc.id] = data.fetchedAt.toDate().toISOString();
+        }
+      });
+    }
+
+    return timestamps;
+  } catch (error) {
+    console.error('Error fetching source timestamps:', error);
+    return {};
   }
 }
 
@@ -96,10 +157,14 @@ export async function GET(request: NextRequest) {
           );
       }
 
+      // Get source timestamps even for fresh fetches (only for this mode)
+      const sourceTimestamps = await getSourceTimestamps(mode);
+
       result = {
         rankings,
         cached: false,
         fetchedAt: new Date().toISOString(),
+        sourceTimestamps,
       };
 
       await writeRankingsToCache(mode, rankings);

@@ -11,6 +11,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [sourceTimestamps, setSourceTimestamps] = useState<Record<string, string>>({});
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
     general: [
@@ -53,7 +54,10 @@ export default function Home() {
 
       setGeneralRankings(generalData.rankings);
       setCodingRankings(codingData.rankings);
-      setLastUpdated(new Date());
+      // Use the actual fetchedAt timestamp from the API response
+      setLastUpdated(generalData.fetchedAt ? new Date(generalData.fetchedAt) : new Date());
+      // Store per-source timestamps for displaying when sources are missing
+      setSourceTimestamps(generalData.sourceTimestamps || {});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setGeneralRankings([]);
@@ -63,8 +67,9 @@ export default function Home() {
     }
   }, []);
 
+  // Load cached rankings on initial mount (no auto-refresh)
   useEffect(() => {
-    fetchRankings();
+    fetchRankings(false); // false = use cached data only, no refresh
   }, [fetchRankings]);
 
   const formatSourceName = (source: string): string => {
@@ -81,22 +86,58 @@ export default function Home() {
       .replace('arc-agi', 'ARC-AGI')
       .replace('webdev', 'WebDev')
       .replace('overall', 'Overall')
-      .replace('coding', 'Coding');
+      .replace('coding', 'Coding')
+      .replace('search', 'Search')
+      .replace('vision', 'Vision')
+      .replace('vibe-code', 'Vibe-Code');
   };
 
   const getCurrentRankings = () => {
     return mode === 'general' ? generalRankings : codingRankings;
   };
 
+  // Helper to get display rank with tie handling
+  const getDisplayRank = (index: number): string => {
+    const rankings = getCurrentRankings();
+    if (rankings.length === 0) return `${index + 1}`;
+
+    // Find if there are ties at this position
+    const currentRank = rankings[index].aggregatedRank;
+
+    // Count how many models have this exact same rank
+    const tiedModels = rankings.filter(r =>
+      Math.abs(r.aggregatedRank - currentRank) < 0.01 // Use small epsilon for floating point comparison
+    );
+
+    if (tiedModels.length > 1) {
+      // There's a tie - find the actual rank position (1-indexed)
+      let actualRank = 1;
+      for (let i = 0; i < index; i++) {
+        if (Math.abs(rankings[i].aggregatedRank - currentRank) >= 0.01) {
+          actualRank++;
+        }
+      }
+      return `T-${actualRank}`;
+    }
+
+    // No tie - return normal rank
+    return `${index + 1}`;
+  };
+
   const hasAnyData = generalRankings.length > 0 || codingRankings.length > 0;
 
-  const getMissingSources = (): string[] => {
+  const getMissingSources = (): Array<{ source: string; lastFetched?: string }> => {
     const rankings = getCurrentRankings();
     if (rankings.length === 0) return [];
 
     const present = new Set(Object.keys(rankings[0]?.ranks ?? {}));
     const expected = expectedSourcesByMode[mode];
-    return expected.filter(source => !present.has(source));
+    const missing = expected.filter(source => !present.has(source));
+
+    return missing.map(source => ({
+      source,
+      lastFetched: sourceTimestamps[source],
+    }));
   };
 
   const getModeTitle = () => {
@@ -211,9 +252,21 @@ export default function Home() {
               {getModeDescription()}
             </p>
             {getMissingSources().length > 0 && (
-              <p className="text-xs text-amber-700 mt-2">
-                Partial data: missing {getMissingSources().map(formatSourceName).join(', ')}
-              </p>
+              <div className="text-xs text-amber-700 mt-2">
+                <p className="font-semibold">Using cached data for missing sources:</p>
+                <ul className="mt-1 ml-4 list-disc">
+                  {getMissingSources().map(({ source, lastFetched }) => (
+                    <li key={source}>
+                      {formatSourceName(source)}
+                      {lastFetched && (
+                        <span className="text-amber-600">
+                          {' '}(last updated: {new Date(lastFetched).toLocaleString()})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
             {lastUpdated && (
@@ -254,7 +307,7 @@ export default function Home() {
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-xl font-bold text-blue-600">
-                        {index + 1}
+                        {getDisplayRank(index)}
                       </span>
                     </div>
 
