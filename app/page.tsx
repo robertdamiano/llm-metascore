@@ -12,6 +12,7 @@ export default function Home() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [sourceTimestamps, setSourceTimestamps] = useState<Record<string, string>>({});
+  const [staleSources, setStaleSources] = useState<string[]>([]);
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
     general: [
@@ -58,6 +59,8 @@ export default function Home() {
       setLastUpdated(generalData.fetchedAt ? new Date(generalData.fetchedAt) : new Date());
       // Store per-source timestamps for displaying when sources are missing
       setSourceTimestamps(generalData.sourceTimestamps || {});
+      // Store stale sources from API response
+      setStaleSources(generalData.staleSources || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
       setGeneralRankings([]);
@@ -126,15 +129,12 @@ export default function Home() {
 
   const hasAnyData = generalRankings.length > 0 || codingRankings.length > 0;
 
-  const getMissingSources = (): Array<{ source: string; lastFetched?: string }> => {
-    const rankings = getCurrentRankings();
-    if (rankings.length === 0) return [];
+  const getStaleSourcesForMode = (): Array<{ source: string; lastFetched?: string }> => {
+    // Filter staleSources to only show sources relevant to current mode
+    const expectedForMode = expectedSourcesByMode[mode];
+    const staleForMode = staleSources.filter(source => expectedForMode.includes(source));
 
-    const present = new Set(Object.keys(rankings[0]?.ranks ?? {}));
-    const expected = expectedSourcesByMode[mode];
-    const missing = expected.filter(source => !present.has(source));
-
-    return missing.map(source => ({
+    return staleForMode.map(source => ({
       source,
       lastFetched: sourceTimestamps[source],
     }));
@@ -251,11 +251,11 @@ export default function Home() {
             <p className="text-sm text-gray-600 mt-4">
               {getModeDescription()}
             </p>
-            {getMissingSources().length > 0 && (
+            {getStaleSourcesForMode().length > 0 && (
               <div className="text-xs text-amber-700 mt-2">
-                <p className="font-semibold">Using cached data for missing sources:</p>
+                <p className="font-semibold">The following sources are using cached or partial data:</p>
                 <ul className="mt-1 ml-4 list-disc">
-                  {getMissingSources().map(({ source, lastFetched }) => (
+                  {getStaleSourcesForMode().map(({ source, lastFetched }) => (
                     <li key={source}>
                       {formatSourceName(source)}
                       {lastFetched && (

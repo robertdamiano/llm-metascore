@@ -133,9 +133,9 @@ function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry
 async function mergeCachedSources(
   allSources: Record<string, ModelEntry[]>,
   mode: string
-): Promise<Record<string, ModelEntry[]>> {
+): Promise<{ mergedSources: Record<string, ModelEntry[]>; staleSources: string[] }> {
   const sources = SOURCES_PER_MODE[mode] || [];
-  if (sources.length === 0) return allSources;
+  if (sources.length === 0) return { mergedSources: allSources, staleSources: [] };
 
   const refs = sources.map(source => db.collection('rankings_cache').doc(source));
   const docs = await db.getAll(...refs);
@@ -150,23 +150,27 @@ async function mergeCachedSources(
   });
 
   const mergedSources = { ...allSources };
+  const staleSources: string[] = [];
+  const normalize = (name: string) => name.trim().toLowerCase();
+
   for (const source of sources) {
     const liveEntries = mergedSources[source] ?? [];
     const cachedEntries = cachedBySource.get(source) ?? [];
 
-    if (source === 'vals:vibe-code') {
-      if (cachedEntries.length > 0) {
-        mergedSources[source] = mergeByName(cachedEntries, liveEntries);
-      }
-      continue;
-    }
+    if (cachedEntries.length === 0) continue;
 
-    if (liveEntries.length === 0 && cachedEntries.length > 0) {
-      mergedSources[source] = cachedEntries;
+    // Always merge by name (cached first, fresh overwrites)
+    mergedSources[source] = mergeByName(cachedEntries, liveEntries);
+
+    // Track if any cached entries were used (not overwritten by fresh)
+    const freshNames = new Set(liveEntries.map(e => normalize(e.name)));
+    const usedCached = cachedEntries.some(e => !freshNames.has(normalize(e.name)));
+    if (usedCached || liveEntries.length === 0) {
+      staleSources.push(source);
     }
   }
 
-  return mergedSources;
+  return { mergedSources, staleSources };
 }
 
 async function writeRankingsToCache(mode: string, rankings: unknown) {
@@ -202,7 +206,7 @@ export async function GET(request: NextRequest) {
     if (!result) {
       // Cache miss or expired - fetch fresh data
       const allSources = await fetchAllSources();
-      const mergedSources = await mergeCachedSources(allSources, mode);
+      const { mergedSources, staleSources } = await mergeCachedSources(allSources, mode);
       let rankings;
 
       switch (mode) {
@@ -229,6 +233,7 @@ export async function GET(request: NextRequest) {
         cached: false,
         fetchedAt: new Date().toISOString(),
         sourceTimestamps,
+        staleSources,
       };
 
       await writeRankingsToCache(mode, rankings);
