@@ -97,19 +97,17 @@ async function getSourceTimestamps(mode?: string): Promise<Record<string, string
 
 const SOURCES_PER_MODE: Record<string, string[]> = {
   general: [
-    'openlm:arena:overall',
-    'openlm:arena:vision',
+    'lmarena:text',
+    'lmarena:vision',
     'lmarena:search',
-    'openlm:arena:aaii',
-    'openlm:arena:mmlu-pro',
-    'openlm:arena:arc-agi',
+    'aa:omniscience',
+    'aa:hallucination',
   ],
   coding: [
     'lmarena:webdev',
-    'openlm:arena:coding',
-    'openlm:swebench',
-    'openlm:ioi',
-    'vals:vibe-code',
+    'swebench:bash',
+    'aa:coding',
+    'aa:agentic',
   ],
 };
 

@@ -1,35 +1,32 @@
 import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig } from './types';
 import { identifyCreator, ALLOWED_CREATORS } from './vendors';
 import { aggregateAverageRank } from './aggregation';
-import { fetchOpenLMArena } from './scrapers/openlm-arena';
-import { fetchOpenLMSWEBench } from './scrapers/openlm-swebench';
 import { fetchLMArenaAllSources } from './scrapers/lmarena';
-import { fetchValsAI } from './scrapers/vals';
+import { fetchArtificialAnalysis } from './scrapers/artificial-analysis';
+import { fetchSWEBench } from './scrapers/swebench';
 
 // Leaderboard definitions
 const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   name: 'General Intelligence',
-  description: 'Arena Elo (overall/vision) + LMArena Search + MMLU-Pro + ARC-AGI + AAII',
+  description: 'LMArena (Text/Vision/Search) + AA Omniscience + AA Hallucination',
   sources: [
-    'openlm:arena:overall',
-    'openlm:arena:vision',
+    'lmarena:text',
+    'lmarena:vision',
     'lmarena:search',
-    'openlm:arena:aaii',
-    'openlm:arena:mmlu-pro',
-    'openlm:arena:arc-agi',
+    'aa:omniscience',
+    'aa:hallucination',
   ],
   minLabsRequired: 3,
 };
 
 const CODING: LeaderboardConfig = {
   name: 'Coding',
-  description: 'WebDev + Arena Coding + SWE-bench + IOI + Vibe Code',
+  description: 'LMArena WebDev + SWE-bench Bash + AA Coding + AA Agentic',
   sources: [
     'lmarena:webdev',
-    'openlm:arena:coding',
-    'openlm:swebench',
-    'openlm:ioi',
-    'vals:vibe-code',
+    'swebench:bash',
+    'aa:coding',
+    'aa:agentic',
   ],
   minLabsRequired: 3,
 };
@@ -93,18 +90,16 @@ function filterSourcesByLabCoverage(
 }
 
 export async function fetchAllSources(): Promise<Record<string, ModelEntry[]>> {
-  const [openlmArena, openlmSWE, lmarena, vals] = await Promise.all([
-    fetchOpenLMArena(),
-    fetchOpenLMSWEBench(),
+  const [lmarena, aa, swebench] = await Promise.all([
     fetchLMArenaAllSources(),
-    fetchValsAI(),
+    fetchArtificialAnalysis(),
+    fetchSWEBench(),
   ]);
 
   return {
-    ...openlmArena,
-    ...openlmSWE,
     ...lmarena,
-    ...vals,
+    ...aa,
+    ...swebench,
   };
 }
 

@@ -5,8 +5,8 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 ## Web Application
 
 A Next.js web application that fetches and displays real-time rankings from:
-- **General Intelligence**: OpenLM.ai (Arena Overall, Vision, AAII, MMLU-Pro, ARC-AGI) + LMArena (Search)
-- **Coding**: LMArena (WebDev) + OpenLM.ai (Arena Coding, SWE-bench, IOI) + Vals.ai (Vibe Code)
+- **General Intelligence**: LMArena (Text, Vision, Search) + Artificial Analysis (Omniscience Index, Hallucination Rate)
+- **Coding**: LMArena (WebDev) + SWE-bench (Bash Only) + Artificial Analysis (Coding Index, Agentic Index)
 
 ### Setup
 
@@ -88,10 +88,11 @@ Firebase will automatically build and deploy your Next.js app with Cloud Functio
 
 All data is fetched live from static HTML (no headless browser required):
 
-- **lmarena.ai/leaderboard**: Search, WebDev categories
-- **openlm.ai/chatbot-arena**: Arena Overall, Vision, Coding, AAII, MMLU-Pro, ARC-AGI
-- **openlm.ai/swe-bench**: SWE-bench and IOI benchmarks
-- **vals.ai/benchmarks/vibe-code**: Vibe Code benchmark (top 3 models only)
+- **lmarena.ai/leaderboard**: Text, Vision, Search, WebDev category pages
+- **artificialanalysis.ai**:
+  - Omniscience Index, Hallucination Rate: /evaluations/omniscience
+  - Coding Index, Agentic Index: /models
+- **swebench.com**: Bash Only category benchmark
 
 ## Aggregation Rules
 
@@ -101,13 +102,13 @@ All data is fetched live from static HTML (no headless browser required):
 - No tie-breaks (stable sort by average rank).
 
 Data composition:
-- **General Intelligence**:
-    - OpenLM.ai: Arena Overall, Vision, AAII, MMLU-Pro, ARC-AGI
-    - LMArena: Search
-- **Coding**:
+- **General Intelligence** (5 sources):
+    - LMArena: Text, Vision, Search
+    - Artificial Analysis: Omniscience Index, Hallucination Rate (lower is better)
+- **Coding** (4 sources):
     - LMArena: WebDev
-    - OpenLM.ai: Arena Coding, SWE-bench, IOI
-    - Vals.ai: Vibe Code
+    - SWE-bench: Bash Only
+    - Artificial Analysis: Coding Index, Agentic Index
 
 ## Vendor Mapping
 

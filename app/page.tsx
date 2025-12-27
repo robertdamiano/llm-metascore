@@ -16,19 +16,17 @@ export default function Home() {
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
     general: [
-      'openlm:arena:overall',
-      'openlm:arena:vision',
+      'lmarena:text',
+      'lmarena:vision',
       'lmarena:search',
-      'openlm:arena:aaii',
-      'openlm:arena:mmlu-pro',
-      'openlm:arena:arc-agi',
+      'aa:omniscience',
+      'aa:hallucination',
     ],
     coding: [
       'lmarena:webdev',
-      'openlm:arena:coding',
-      'openlm:swebench',
-      'openlm:ioi',
-      'vals:vibe-code',
+      'swebench:bash',
+      'aa:coding',
+      'aa:agentic',
     ],
   };
 
@@ -77,22 +75,18 @@ export default function Home() {
 
   const formatSourceName = (source: string): string => {
     return source
-      .replace('openlm:arena:', 'OpenLM Arena ')
-      .replace('openlm:swebench', 'OpenLM SWE-bench')
-      .replace('openlm:ioi', 'OpenLM IOI')
-      .replace('openlm:', 'OpenLM ')
       .replace('lmarena:', 'LMArena ')
-      .replace('vals:', 'Vals.ai ')
-      .replace('swebench', 'SWE-bench')
-      .replace('aaii', 'AAII (Artificial Analysis)')
-      .replace('mmlu-pro', 'MMLU-Pro')
-      .replace('arc-agi', 'ARC-AGI')
-      .replace('webdev', 'WebDev')
-      .replace('overall', 'Overall')
-      .replace('coding', 'Coding')
-      .replace('search', 'Search')
+      .replace('aa:', 'Artificial Analysis ')
+      .replace('swebench:', 'SWE-bench ')
+      .replace('text', 'Text')
       .replace('vision', 'Vision')
-      .replace('vibe-code', 'Vibe-Code');
+      .replace('search', 'Search')
+      .replace('webdev', 'WebDev')
+      .replace('omniscience', 'Omniscience')
+      .replace('hallucination', 'Hallucination')
+      .replace('coding', 'Coding')
+      .replace('agentic', 'Agentic')
+      .replace('bash', 'Bash Only');
   };
 
   const getCurrentRankings = () => {
@@ -152,9 +146,9 @@ export default function Home() {
   const getModeDescription = () => {
     switch (mode) {
       case 'general':
-        return 'Rankings based on LMArena and OpenLM Arena benchmarks (including Artificial Analysis)';
+        return 'Rankings based on LMArena (Text/Vision/Search) and Artificial Analysis (Omniscience/Hallucination)';
       case 'coding':
-        return 'Rankings based on LMArena WebDev, OpenLM Arena Coding, SWE-bench, IOI, and Vals.ai';
+        return 'Rankings based on LMArena WebDev, SWE-bench Bash, and Artificial Analysis (Coding/Agentic)';
     }
   };
 
@@ -192,7 +186,7 @@ export default function Home() {
                 Welcome to LLM Metascore
               </h2>
               <p className="text-gray-600 mb-6">
-                Click below to refresh rankings aggregated from LMArena, OpenLM, and Vals.ai
+                Click below to refresh rankings aggregated from LMArena, Artificial Analysis, and SWE-bench
               </p>
               <button
                 onClick={() => fetchRankings(true)}
@@ -346,7 +340,7 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>
-            Rankings aggregated from LMArena, OpenLM, and Vals.ai
+            Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench
           </p>
           <p className="mt-2">
             Tracking: Anthropic, Google, OpenAI, and xAI

@@ -7,10 +7,12 @@
 
 ## Data Sources & Scrapers
 - **All scrapers** (`lib/scrapers/*.ts`): fetch live data from static HTML (no JS rendering needed)
-  - `openlm-arena.ts`: OpenLM.ai Arena Elo, Coding, Vision, AAII, MMLU-Pro, ARC-AGI
-  - `openlm-swebench.ts`: OpenLM.ai SWE-bench and IOI benchmarks
-  - `lmarena.ts`: LMArena Text, Vision, Search, WebDev categories
-  - `vals.ts`: Vals.ai Vibe Code benchmark (top 3 models only)
+  - `lmarena.ts`: LMArena Text, Vision, Search, WebDev category pages (lmarena.ai/leaderboard)
+  - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai)
+    - Omniscience Index, Hallucination Rate: fetched from /evaluations/omniscience page
+    - Coding Index, Agentic Index: fetched from /models page
+    - **Important**: Omniscience values use the simple `"omniscience":VALUE` field, not the `"omniscience_breakdown"` nested data. The scraper checks context to skip breakdown values and uses only the main leaderboard score (range: -100 to 100).
+  - `swebench.ts`: SWE-bench Bash Only category (swebench.com)
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
 - All scrapers are imported by `lib/rankings.ts` which orchestrates fetching and aggregation
 

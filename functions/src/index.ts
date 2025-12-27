@@ -31,19 +31,17 @@ function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry
 
 const SOURCES_PER_MODE: Record<string, string[]> = {
   general: [
-    'openlm:arena:overall',
-    'openlm:arena:vision',
+    'lmarena:text',
+    'lmarena:vision',
     'lmarena:search',
-    'openlm:arena:aaii',
-    'openlm:arena:mmlu-pro',
-    'openlm:arena:arc-agi',
+    'aa:omniscience',
+    'aa:hallucination',
   ],
   coding: [
     'lmarena:webdev',
-    'openlm:arena:coding',
-    'openlm:swebench',
-    'openlm:ioi',
-    'vals:vibe-code',
+    'swebench:bash',
+    'aa:coding',
+    'aa:agentic',
   ],
 };
 
@@ -69,20 +67,15 @@ async function mergeCachedSources(
   });
 
   const mergedSources = { ...allSources };
+
   for (const source of ALL_SOURCES) {
     const liveEntries = mergedSources[source] ?? [];
     const cachedEntries = cachedBySource.get(source) ?? [];
 
-    if (source === 'vals:vibe-code') {
-      if (cachedEntries.length > 0) {
-        mergedSources[source] = mergeByName(cachedEntries, liveEntries);
-      }
-      continue;
-    }
+    if (cachedEntries.length === 0) continue;
 
-    if (liveEntries.length === 0 && cachedEntries.length > 0) {
-      mergedSources[source] = cachedEntries;
-    }
+    // Always merge by name (cached first, fresh overwrites)
+    mergedSources[source] = mergeByName(cachedEntries, liveEntries);
   }
 
   return mergedSources;
