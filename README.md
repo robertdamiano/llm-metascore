@@ -51,6 +51,7 @@ The app uses Firebase Firestore for caching rankings data:
 - **Scheduled refresh**: A Cloud Function runs daily at midnight UTC to refresh all rankings
 - **Cache TTL**: 24 hours
 - **API fallback**: If cache is empty or expired, the API fetches fresh data directly
+- **Graceful degradation**: Individual source failures don't crash the app - rankings are computed from available sources with failed/stale sources clearly flagged
 
 To deploy Firebase Functions:
 ```bash
@@ -93,6 +94,15 @@ All data is fetched live from static HTML (no headless browser required):
   - Omniscience Index, Hallucination Rate: /evaluations/omniscience
   - Coding Index, Agentic Index: /models
 - **swebench.com**: Bash Only category benchmark
+
+### Error Handling & Resilience
+
+The application implements graceful degradation:
+- Each data source is fetched independently with error handling
+- If a source fails, rankings are computed from remaining successful sources
+- API responses include per-source health status (`success`, `cached`, or `failed`)
+- Failed sources fall back to cached data when available
+- The app remains functional even when individual sources are temporarily unavailable
 
 ## Aggregation Rules
 

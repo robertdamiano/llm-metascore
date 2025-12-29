@@ -15,6 +15,7 @@
   - `swebench.ts`: SWE-bench Bash Only category (swebench.com)
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
 - All scrapers are imported by `lib/rankings.ts` which orchestrates fetching and aggregation
+- **Error handling**: `fetchAllSources()` wraps each scraper group (LMArena, AA, SWE-bench) in try-catch blocks. Failed sources return empty arrays and error details in `SourceFetchResult[]`, allowing rankings to be computed from available sources. The API route (`app/api/rankings/route.ts`) merges fresh data with cached fallbacks and returns per-source health status.
 
 ## Build, Test, and Development Commands
 - Install deps: `npm install` (root) and `cd functions && npm install` (functions)

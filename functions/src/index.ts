@@ -89,9 +89,9 @@ export const refreshRankingsCache = functions.pubsub
     console.log('Starting daily rankings cache refresh');
 
     try {
-      // Fetch all raw sources - returns a Record with sources and errors
-      const allSources = await fetchAllSources();
-      const mergedSources = await mergeCachedSources(allSources);
+      // Fetch all raw sources - returns FetchAllSourcesResult with sources and sourceResults
+      const fetchResult = await fetchAllSources();
+      const mergedSources = await mergeCachedSources(fetchResult.sources);
       const now = admin.firestore.Timestamp.now();
       const ttlSeconds = 24 * 60 * 60; // 24 hours
       const expiresAt = admin.firestore.Timestamp.fromMillis(
@@ -161,8 +161,8 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
 
   try {
     // Fetch all raw sources
-      const allSources = await fetchAllSources();
-      const mergedSources = await mergeCachedSources(allSources);
+      const fetchResult = await fetchAllSources();
+      const mergedSources = await mergeCachedSources(fetchResult.sources);
     const now = admin.firestore.Timestamp.now();
     const ttlSeconds = 24 * 60 * 60;
     const expiresAt = admin.firestore.Timestamp.fromMillis(

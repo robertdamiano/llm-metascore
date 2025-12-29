@@ -43,3 +43,19 @@ export interface CachedRankingData {
   fetchedAt: Date;
   expiresAt: Date;
 }
+
+// Source fetch status tracking
+export type SourceStatus = 'success' | 'failed' | 'cached';
+
+export interface SourceFetchResult {
+  source: SourceKey;
+  status: SourceStatus;
+  entries: ModelEntry[];
+  error?: string;
+  timestamp?: string;
+}
+
+export interface FetchAllSourcesResult {
+  sources: Record<string, ModelEntry[]>;
+  sourceResults: SourceFetchResult[];
+}

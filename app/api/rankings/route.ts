@@ -6,7 +6,7 @@ import {
   buildGeneralRankings,
   buildCodingRankings,
 } from '@/lib/rankings';
-import { ModelEntry } from '@/lib/types';
+import { ModelEntry, SourceFetchResult, SourceKey } from '@/lib/types';
 
 // Initialize Firebase Admin (if not already)
 if (!getApps().length) {
@@ -111,64 +111,70 @@ const SOURCES_PER_MODE: Record<string, string[]> = {
   ],
 };
 
-function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry[] {
-  const merged = new Map<string, ModelEntry>();
-  const normalize = (name: string) => name.trim().toLowerCase();
-
-  for (const entry of existing) {
-    if (!entry?.name) continue;
-    merged.set(normalize(entry.name), entry);
-  }
-
-  for (const entry of incoming) {
-    if (!entry?.name) continue;
-    merged.set(normalize(entry.name), entry);
-  }
-
-  return Array.from(merged.values());
-}
-
 async function mergeCachedSources(
   allSources: Record<string, ModelEntry[]>,
-  mode: string
-): Promise<{ mergedSources: Record<string, ModelEntry[]>; staleSources: string[] }> {
+  mode: string,
+  sourceResults: SourceFetchResult[]
+): Promise<{ mergedSources: Record<string, ModelEntry[]>; sourceHealth: SourceFetchResult[] }> {
   const sources = SOURCES_PER_MODE[mode] || [];
-  if (sources.length === 0) return { mergedSources: allSources, staleSources: [] };
+  if (sources.length === 0) return { mergedSources: allSources, sourceHealth: sourceResults };
 
   const refs = sources.map(source => db.collection('rankings_cache').doc(source));
   const docs = await db.getAll(...refs);
-  const cachedBySource = new Map<string, ModelEntry[]>();
+  const cachedBySource = new Map<string, { entries: ModelEntry[], timestamp: string }>();
 
   docs.forEach(doc => {
     if (!doc.exists) return;
-    const entries = (doc.data()?.entries ?? []) as ModelEntry[];
+    const data = doc.data();
+    const entries = (data?.entries ?? []) as ModelEntry[];
+    const timestamp = data?.fetchedAt?.toDate().toISOString() ?? new Date().toISOString();
     if (entries.length > 0) {
-      cachedBySource.set(doc.id, entries);
+      cachedBySource.set(doc.id, { entries, timestamp });
     }
   });
 
   const mergedSources = { ...allSources };
-  const staleSources: string[] = [];
-  const normalize = (name: string) => name.trim().toLowerCase();
+  const sourceHealth: SourceFetchResult[] = [];
 
   for (const source of sources) {
     const liveEntries = mergedSources[source] ?? [];
-    const cachedEntries = cachedBySource.get(source) ?? [];
+    const cached = cachedBySource.get(source);
+    const cachedEntries = cached?.entries ?? [];
+    const cachedTimestamp = cached?.timestamp;
 
-    if (cachedEntries.length === 0) continue;
+    // Find the fetch result for this source
+    const fetchResult = sourceResults.find(r => r.source === source);
 
-    // Always merge by name (cached first, fresh overwrites)
-    mergedSources[source] = mergeByName(cachedEntries, liveEntries);
-
-    // Track if any cached entries were used (not overwritten by fresh)
-    const freshNames = new Set(liveEntries.map(e => normalize(e.name)));
-    const usedCached = cachedEntries.some(e => !freshNames.has(normalize(e.name)));
-    if (usedCached || liveEntries.length === 0) {
-      staleSources.push(source);
+    if (liveEntries.length > 0) {
+      // Fresh data available
+      sourceHealth.push({
+        source: source as SourceKey,
+        status: 'success',
+        entries: liveEntries,
+        timestamp: fetchResult?.timestamp ?? new Date().toISOString(),
+      });
+    } else if (cachedEntries.length > 0) {
+      // No fresh data, using cache
+      mergedSources[source] = cachedEntries;
+      sourceHealth.push({
+        source: source as SourceKey,
+        status: 'cached',
+        entries: cachedEntries,
+        timestamp: cachedTimestamp,
+      });
+    } else {
+      // No data at all (fresh fetch failed and no cache)
+      sourceHealth.push({
+        source: source as SourceKey,
+        status: 'failed',
+        entries: [],
+        error: fetchResult?.error ?? 'No data available',
+        timestamp: fetchResult?.timestamp ?? new Date().toISOString(),
+      });
     }
   }
 
-  return { mergedSources, staleSources };
+  return { mergedSources, sourceHealth };
 }
 
 async function writeRankingsToCache(mode: string, rankings: unknown) {
@@ -203,8 +209,12 @@ export async function GET(request: NextRequest) {
 
     if (!result) {
       // Cache miss or expired - fetch fresh data
-      const allSources = await fetchAllSources();
-      const { mergedSources, staleSources } = await mergeCachedSources(allSources, mode);
+      const fetchResult = await fetchAllSources();
+      const { mergedSources, sourceHealth } = await mergeCachedSources(
+        fetchResult.sources,
+        mode,
+        fetchResult.sourceResults
+      );
       let rankings;
 
       switch (mode) {
@@ -223,8 +233,18 @@ export async function GET(request: NextRequest) {
           );
       }
 
-      // Get source timestamps even for fresh fetches (only for this mode)
-      const sourceTimestamps = await getSourceTimestamps(mode);
+      // Build sourceTimestamps for backwards compatibility
+      const sourceTimestamps: Record<string, string> = {};
+      const staleSources: string[] = [];
+
+      for (const health of sourceHealth) {
+        if (health.timestamp) {
+          sourceTimestamps[health.source] = health.timestamp;
+        }
+        if (health.status === 'cached' || health.status === 'failed') {
+          staleSources.push(health.source);
+        }
+      }
 
       result = {
         rankings,
@@ -232,6 +252,7 @@ export async function GET(request: NextRequest) {
         fetchedAt: new Date().toISOString(),
         sourceTimestamps,
         staleSources,
+        sourceHealth, // New field with detailed status
       };
 
       await writeRankingsToCache(mode, rankings);

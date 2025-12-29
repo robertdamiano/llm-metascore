@@ -1,4 +1,4 @@
-import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig } from './types';
+import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig, FetchAllSourcesResult, SourceFetchResult } from './types';
 import { identifyCreator, ALLOWED_CREATORS } from './vendors';
 import { aggregateAverageRank } from './aggregation';
 import { fetchLMArenaAllSources } from './scrapers/lmarena';
@@ -89,30 +89,98 @@ function filterSourcesByLabCoverage(
   return filtered;
 }
 
-export async function fetchAllSources(): Promise<Record<string, ModelEntry[]>> {
-  const [lmarena, aa, swebench] = await Promise.all([
-    fetchLMArenaAllSources(),
-    fetchArtificialAnalysis(),
-    fetchSWEBench(),
-  ]);
+export async function fetchAllSources(): Promise<FetchAllSourcesResult> {
+  const sourceResults: SourceFetchResult[] = [];
+  const sources: Record<string, ModelEntry[]> = {};
 
-  return {
-    ...lmarena,
-    ...aa,
-    ...swebench,
-  };
+  // Fetch LMArena sources with individual error handling
+  try {
+    const lmarenaData = await fetchLMArenaAllSources();
+    for (const [sourceKey, entries] of Object.entries(lmarenaData)) {
+      sources[sourceKey] = entries;
+      sourceResults.push({
+        source: sourceKey as SourceKey,
+        status: 'success',
+        entries,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    const lmarenaSources: SourceKey[] = ['lmarena:text', 'lmarena:vision', 'lmarena:search', 'lmarena:webdev'];
+    for (const source of lmarenaSources) {
+      sourceResults.push({
+        source,
+        status: 'failed',
+        entries: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Fetch Artificial Analysis sources with individual error handling
+  try {
+    const aaData = await fetchArtificialAnalysis();
+    for (const [sourceKey, entries] of Object.entries(aaData)) {
+      sources[sourceKey] = entries;
+      sourceResults.push({
+        source: sourceKey as SourceKey,
+        status: 'success',
+        entries,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:coding', 'aa:agentic'];
+    for (const source of aaSources) {
+      sourceResults.push({
+        source,
+        status: 'failed',
+        entries: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Fetch SWE-bench sources with individual error handling
+  try {
+    const swebenchData = await fetchSWEBench();
+    for (const [sourceKey, entries] of Object.entries(swebenchData)) {
+      sources[sourceKey] = entries;
+      sourceResults.push({
+        source: sourceKey as SourceKey,
+        status: 'success',
+        entries,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    const swebenchSources: SourceKey[] = ['swebench:bash'];
+    for (const source of swebenchSources) {
+      sourceResults.push({
+        source,
+        status: 'failed',
+        entries: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  return { sources, sourceResults };
 }
 
 export async function fetchGeneralRankings(): Promise<AggregatedEntry[]> {
-  const allSources = await fetchAllSources();
+  const { sources } = await fetchAllSources();
 
-  return buildGeneralRankings(allSources);
+  return buildGeneralRankings(sources);
 }
 
 export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
-  const allSources = await fetchAllSources();
+  const { sources } = await fetchAllSources();
 
-  return buildCodingRankings(allSources);
+  return buildCodingRankings(sources);
 }
 
 export function buildGeneralRankings(
