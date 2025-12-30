@@ -28,10 +28,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Create .env file for deployment
+        run: |
+          echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" > .env
+
       - name: Build Next.js
         run: npm run build
-        env:
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
       - name: Build Firebase Functions
         run: cd functions && npm run build
