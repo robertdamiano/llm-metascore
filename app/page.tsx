@@ -27,6 +27,8 @@ export default function Home() {
       'swebench:bash',
       'aa:coding',
       'aa:agentic',
+      'aa:longcontext',
+      'aa:ifbench',
     ],
   };
 
@@ -86,6 +88,8 @@ export default function Home() {
       .replace('hallucination', 'Hallucination')
       .replace('coding', 'Coding')
       .replace('agentic', 'Agentic')
+      .replace('longcontext', 'Long Context')
+      .replace('ifbench', 'IFBench')
       .replace('bash', 'Bash Only');
   };
 

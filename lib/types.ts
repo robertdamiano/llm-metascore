@@ -25,6 +25,8 @@ export type SourceKey =
   | 'aa:hallucination'
   | 'aa:coding'
   | 'aa:agentic'
+  | 'aa:longcontext'
+  | 'aa:ifbench'
   // SWE-bench sources (from swebench.com)
   | 'swebench:bash';
 

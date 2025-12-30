@@ -11,6 +11,8 @@
   - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai) - uses `fetchWithRetry()`
     - Omniscience Index, Hallucination Rate: fetched from /evaluations/omniscience page
     - Coding Index, Agentic Index: fetched from /models page
+    - Long Context Reasoning: fetched from /evaluations/artificial-analysis-long-context-reasoning page
+    - IFBench: fetched from /evaluations/ifbench page
     - **Important**: Omniscience values use the simple `"omniscience":VALUE` field, not the `"omniscience_breakdown"` nested data. The scraper checks context to skip breakdown values and uses only the main leaderboard score (range: -100 to 100).
   - `swebench.ts`: SWE-bench Bash Only category (swebench.com) - uses `fetchWithRetry()`
 - **Retry logic**: All HTTP requests use `fetchWithRetry()` (`lib/utils/retry.ts`) with exponential backoff (1s → 2s → 4s + jitter). Retries on HTTP 429 (rate limit) and 500-599 (server errors), but not on 400-428 or 430-499 client errors.

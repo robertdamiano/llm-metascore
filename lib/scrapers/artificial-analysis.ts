@@ -7,6 +7,8 @@ interface AAModel {
   hallucination_rate?: number;
   coding_index?: number;
   agentic_index?: number;
+  long_context_reasoning?: number;
+  ifbench?: number;
 }
 
 function parseRSCPayload(html: string): AAModel[] {
@@ -145,6 +147,46 @@ function parseRSCPayload(html: string): AAModel[] {
         }
       }
     }
+
+    // Extract long_context_reasoning values
+    // Keep only the first occurrence per model
+    const longContextRegex = /\\"long_context_reasoning\\":([0-9.]+)/g;
+    let longContextMatch;
+    while ((longContextMatch = longContextRegex.exec(html)) !== null) {
+      const value = parseFloat(longContextMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(longContextMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+
+          // Only keep the first occurrence
+          if (model.long_context_reasoning === undefined) {
+            model.long_context_reasoning = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
+
+    // Extract ifbench values
+    // Keep only the first occurrence per model
+    const ifbenchRegex = /\\"ifbench\\":([0-9.]+)/g;
+    let ifbenchMatch;
+    while ((ifbenchMatch = ifbenchRegex.exec(html)) !== null) {
+      const value = parseFloat(ifbenchMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(ifbenchMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+
+          // Only keep the first occurrence
+          if (model.ifbench === undefined) {
+            model.ifbench = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
   } catch (error) {
     console.error('Error parsing AA RSC payload:', error);
   }
@@ -186,6 +228,14 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
     const modelsRes = await fetchWithRetry('https://artificialanalysis.ai/models', { cache: 'no-store' });
     const modelsPageModels = modelsRes.ok ? parseRSCPayload(await modelsRes.text()) : [];
 
+    // Fetch long context reasoning metrics from /evaluations/artificial-analysis-long-context-reasoning
+    const longContextRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/artificial-analysis-long-context-reasoning', { cache: 'no-store' });
+    const longContextModels = longContextRes.ok ? parseRSCPayload(await longContextRes.text()) : [];
+
+    // Fetch ifbench metrics from /evaluations/ifbench
+    const ifbenchRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/ifbench', { cache: 'no-store' });
+    const ifbenchModels = ifbenchRes.ok ? parseRSCPayload(await ifbenchRes.text()) : [];
+
     // Merge models by name
     const allModels = new Map<string, AAModel>();
 
@@ -200,6 +250,26 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
       if (existing) {
         if (model.coding_index !== undefined) existing.coding_index = model.coding_index;
         if (model.agentic_index !== undefined) existing.agentic_index = model.agentic_index;
+      } else {
+        allModels.set(model.short_name, { ...model });
+      }
+    }
+
+    // Merge in long context reasoning metrics
+    for (const model of longContextModels) {
+      const existing = allModels.get(model.short_name);
+      if (existing) {
+        if (model.long_context_reasoning !== undefined) existing.long_context_reasoning = model.long_context_reasoning;
+      } else {
+        allModels.set(model.short_name, { ...model });
+      }
+    }
+
+    // Merge in ifbench metrics
+    for (const model of ifbenchModels) {
+      const existing = allModels.get(model.short_name);
+      if (existing) {
+        if (model.ifbench !== undefined) existing.ifbench = model.ifbench;
       } else {
         allModels.set(model.short_name, { ...model });
       }
@@ -227,6 +297,12 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
 
     const agentic = scoreToRank(models, 'agentic_index');
     if (agentic.length > 0) sources['aa:agentic'] = agentic;
+
+    const longContext = scoreToRank(models, 'long_context_reasoning');
+    if (longContext.length > 0) sources['aa:longcontext'] = longContext;
+
+    const ifbench = scoreToRank(models, 'ifbench');
+    if (ifbench.length > 0) sources['aa:ifbench'] = ifbench;
 
     return sources;
   } catch (error) {

@@ -21,12 +21,14 @@ const GENERAL_INTELLIGENCE: LeaderboardConfig = {
 
 const CODING: LeaderboardConfig = {
   name: 'Coding',
-  description: 'LMArena WebDev + SWE-bench Bash + AA Coding + AA Agentic',
+  description: 'LMArena WebDev + SWE-bench Bash + AA Coding + AA Agentic + AA Long Context + AA IFBench',
   sources: [
     'lmarena:webdev',
     'swebench:bash',
     'aa:coding',
     'aa:agentic',
+    'aa:longcontext',
+    'aa:ifbench',
   ],
   minLabsRequired: 3,
 };
@@ -131,7 +133,7 @@ export async function fetchAllSources(): Promise<FetchAllSourcesResult> {
       });
     }
   } catch (error) {
-    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:coding', 'aa:agentic'];
+    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:coding', 'aa:agentic', 'aa:longcontext', 'aa:ifbench'];
     for (const source of aaSources) {
       sourceResults.push({
         source,
