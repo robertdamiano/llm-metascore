@@ -23,10 +23,12 @@ export type SourceKey =
   // Artificial Analysis sources (from artificialanalysis.ai)
   | 'aa:omniscience'
   | 'aa:hallucination'
-  | 'aa:coding'
-  | 'aa:agentic'
   | 'aa:longcontext'
   | 'aa:ifbench'
+  | 'aa:livecodebench'
+  | 'aa:scicode'
+  | 'aa:terminalbench'
+  | 'aa:tau2'
   // SWE-bench sources (from swebench.com)
   | 'swebench:bash';
 

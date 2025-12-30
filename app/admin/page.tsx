@@ -16,8 +16,10 @@ const SOURCE_OPTIONS: { value: OverrideTarget; label: string }[] = [
   // Coding mode sources
   { value: 'lmarena:webdev', label: 'LMArena WebDev' },
   { value: 'swebench:bash', label: 'SWE-bench Bash' },
-  { value: 'aa:coding', label: 'AA Coding' },
-  { value: 'aa:agentic', label: 'AA Agentic' },
+  { value: 'aa:livecodebench', label: 'AA LiveCodeBench' },
+  { value: 'aa:scicode', label: 'AA SciCode' },
+  { value: 'aa:terminalbench', label: 'AA TerminalBench' },
+  { value: 'aa:tau2', label: 'AA Tau2' },
   { value: 'aa:longcontext', label: 'AA Long Context' },
   { value: 'aa:ifbench', label: 'AA IFBench' },
   { value: 'aggregated:coding', label: 'Final Coding Ranking' },
@@ -203,8 +205,10 @@ export default function AdminPage() {
         opt =>
           opt.value.includes('lmarena:webdev') ||
           opt.value.includes('swebench') ||
-          opt.value.includes('aa:coding') ||
-          opt.value.includes('aa:agentic') ||
+          opt.value.includes('aa:livecodebench') ||
+          opt.value.includes('aa:scicode') ||
+          opt.value.includes('aa:terminalbench') ||
+          opt.value.includes('aa:tau2') ||
           opt.value.includes('aa:longcontext') ||
           opt.value.includes('aa:ifbench') ||
           opt.value === 'aggregated:coding'

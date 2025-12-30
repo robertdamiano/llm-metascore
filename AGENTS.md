@@ -10,10 +10,9 @@
   - `lmarena.ts`: LMArena Text, Vision, Search, WebDev category pages (lmarena.ai/leaderboard) - uses `fetchWithRetry()`
   - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai) - uses `fetchWithRetry()`
     - Omniscience Index, Hallucination Rate: fetched from /evaluations/omniscience page
-    - Coding Index, Agentic Index: fetched from /models page
-    - Long Context Reasoning: fetched from /evaluations/artificial-analysis-long-context-reasoning page
-    - IFBench: fetched from /evaluations/ifbench page
+    - Individual coding benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages using regex extraction
     - **Important**: Omniscience values use the simple `"omniscience":VALUE` field, not the `"omniscience_breakdown"` nested data. The scraper checks context to skip breakdown values and uses only the main leaderboard score (range: -100 to 100).
+    - Individual benchmark fields: `livecodebench`, `scicode`, `terminalbench_hard`, `tau2`, `lcr` (Long Context Reasoning), `ifbench`
   - `swebench.ts`: SWE-bench Bash Only category (swebench.com) - uses `fetchWithRetry()`
 - **Retry logic**: All HTTP requests use `fetchWithRetry()` (`lib/utils/retry.ts`) with exponential backoff (1s → 2s → 4s + jitter). Retries on HTTP 429 (rate limit) and 500-599 (server errors), but not on 400-428 or 430-499 client errors.
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
@@ -50,9 +49,20 @@
 - Data rules: dense, tie-preserving ranks and creator filtering must stay aligned between TS (`lib/aggregation.ts`) and Python (`core/aggregate.py`); update both if logic changes.
 
 ## Testing Guidelines
-- No automated test suite yet; at minimum run `npm run lint` and smoke-test `npm run dev` for UI/API changes.
-- For CLI updates, run `python -m llm_metascore.cli --type general` to confirm snapshots parse. If adding tests, prefer lightweight unit tests (e.g., Node `node:test` or Python `pytest`) that cover aggregation and vendor mapping.
+- **Pre-commit workflow** (MANDATORY before committing):
+  1. Run `npm run lint` to check for linting errors
+  2. Run `npm run build` to verify production build succeeds
+  3. Run `npm run dev` and manually test changes in browser at http://localhost:3000
+  4. Test both general and coding modes if changes affect rankings
+  5. Test the admin panel at http://localhost:3000/admin if admin-related changes were made
+  6. Verify API endpoints work correctly (check browser console for errors)
+- No automated test suite yet; manual testing is critical before commits
+- For CLI updates, run `python -m llm_metascore.cli --type general` to confirm snapshots parse
+- If adding tests, prefer lightweight unit tests (e.g., Node `node:test` or Python `pytest`) that cover aggregation and vendor mapping
 
 ## Commit & Pull Request Guidelines
-- Commits: concise, imperative titles (e.g., “Add Next.js web application”, “Move @types/markdown-it ...”).
-- PRs: include a short summary, linked issue/goal, and local verification notes (`npm run lint`, manual smoke). Attach before/after screenshots for UI tweaks or sample JSON for API changes. Avoid committing secrets or Firebase tokens; keep `.env`-style values local.
+- **Before committing**: Always follow the testing workflow above (lint, build, dev server testing)
+- Commits: concise, imperative titles (e.g., "Add Next.js web application", "Move @types/markdown-it ...")
+- PRs: include a short summary, linked issue/goal, and local verification notes (`npm run lint`, `npm run build`, manual testing in dev server)
+- Attach before/after screenshots for UI tweaks or sample JSON for API changes
+- Avoid committing secrets or Firebase tokens; keep `.env`-style values local

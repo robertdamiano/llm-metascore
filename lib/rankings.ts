@@ -21,12 +21,14 @@ const GENERAL_INTELLIGENCE: LeaderboardConfig = {
 
 const CODING: LeaderboardConfig = {
   name: 'Coding',
-  description: 'LMArena WebDev + SWE-bench Bash + AA Coding + AA Agentic + AA Long Context + AA IFBench',
+  description: 'LMArena WebDev + SWE-bench Bash + AA (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context, IFBench)',
   sources: [
     'lmarena:webdev',
     'swebench:bash',
-    'aa:coding',
-    'aa:agentic',
+    'aa:livecodebench',
+    'aa:scicode',
+    'aa:terminalbench',
+    'aa:tau2',
     'aa:longcontext',
     'aa:ifbench',
   ],
@@ -133,7 +135,7 @@ export async function fetchAllSources(): Promise<FetchAllSourcesResult> {
       });
     }
   } catch (error) {
-    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:coding', 'aa:agentic', 'aa:longcontext', 'aa:ifbench'];
+    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:longcontext', 'aa:ifbench', 'aa:livecodebench', 'aa:scicode', 'aa:terminalbench', 'aa:tau2'];
     for (const source of aaSources) {
       sourceResults.push({
         source,

@@ -5,10 +5,12 @@ interface AAModel {
   short_name: string;
   omniscience?: number;
   hallucination_rate?: number;
-  coding_index?: number;
-  agentic_index?: number;
   lcr?: number; // Long Context Reasoning
   ifbench?: number;
+  livecodebench?: number;
+  scicode?: number;
+  terminalbench_hard?: number;
+  tau2?: number;
 }
 
 function parseRSCPayload(html: string): AAModel[] {
@@ -107,47 +109,6 @@ function parseRSCPayload(html: string): AAModel[] {
       }
     }
 
-    // Extract coding_index values
-    // For models with multiple occurrences, keep the maximum value
-    const codingRegex = /\\"coding_index\\":([0-9.]+)/g;
-    let codingMatch;
-    while ((codingMatch = codingRegex.exec(html)) !== null) {
-      const value = parseFloat(codingMatch[1]);
-      if (!isNaN(value)) {
-        const name = findClosestName(codingMatch.index);
-
-        if (name) {
-          const model = modelsByName.get(name) || { short_name: name };
-
-          // Keep the maximum value (higher is better for coding)
-          if (model.coding_index === undefined || value > model.coding_index) {
-            model.coding_index = value;
-            modelsByName.set(name, model);
-          }
-        }
-      }
-    }
-
-    // Extract agentic_index values
-    // Keep only the first occurrence per model (typically the primary/standard variant)
-    const agenticRegex = /\\"agentic_index\\":([0-9.]+)/g;
-    let agenticMatch;
-    while ((agenticMatch = agenticRegex.exec(html)) !== null) {
-      const value = parseFloat(agenticMatch[1]);
-      if (!isNaN(value)) {
-        const name = findClosestName(agenticMatch.index);
-        if (name) {
-          const model = modelsByName.get(name) || { short_name: name };
-
-          // Only keep the first occurrence
-          if (model.agentic_index === undefined) {
-            model.agentic_index = value;
-            modelsByName.set(name, model);
-          }
-        }
-      }
-    }
-
     // Extract lcr (Long Context Reasoning) values
     // Keep only the first occurrence per model
     const lcrRegex = /\\"lcr\\":([0-9.]+)/g;
@@ -182,6 +143,74 @@ function parseRSCPayload(html: string): AAModel[] {
           // Only keep the first occurrence
           if (model.ifbench === undefined) {
             model.ifbench = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
+
+    // Extract livecodebench values
+    const livecodeRegex = /\\"livecodebench\\":([0-9.]+)/g;
+    let livecodeMatch;
+    while ((livecodeMatch = livecodeRegex.exec(html)) !== null) {
+      const value = parseFloat(livecodeMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(livecodeMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+          if (model.livecodebench === undefined) {
+            model.livecodebench = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
+
+    // Extract scicode values
+    const scicodeRegex = /\\"scicode\\":([0-9.]+)/g;
+    let scicodeMatch;
+    while ((scicodeMatch = scicodeRegex.exec(html)) !== null) {
+      const value = parseFloat(scicodeMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(scicodeMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+          if (model.scicode === undefined) {
+            model.scicode = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
+
+    // Extract terminalbench_hard values
+    const terminalbenchRegex = /\\"terminalbench_hard\\":([0-9.]+)/g;
+    let terminalbenchMatch;
+    while ((terminalbenchMatch = terminalbenchRegex.exec(html)) !== null) {
+      const value = parseFloat(terminalbenchMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(terminalbenchMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+          if (model.terminalbench_hard === undefined) {
+            model.terminalbench_hard = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
+
+    // Extract tau2 values
+    const tau2Regex = /\\"tau2\\":([0-9.]+)/g;
+    let tau2Match;
+    while ((tau2Match = tau2Regex.exec(html)) !== null) {
+      const value = parseFloat(tau2Match[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(tau2Match.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+          if (model.tau2 === undefined) {
+            model.tau2 = value;
             modelsByName.set(name, model);
           }
         }
@@ -232,21 +261,6 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
       }
     }
 
-    // Fetch and process coding/agentic metrics from /models page
-    const modelsRes = await fetchWithRetry('https://artificialanalysis.ai/models', { cache: 'no-store' });
-    if (modelsRes.ok) {
-      const modelsPageModels = parseRSCPayload(await modelsRes.text());
-      for (const model of modelsPageModels) {
-        const existing = allModels.get(model.short_name);
-        if (existing) {
-          if (model.coding_index !== undefined) existing.coding_index = model.coding_index;
-          if (model.agentic_index !== undefined) existing.agentic_index = model.agentic_index;
-        } else {
-          allModels.set(model.short_name, { ...model });
-        }
-      }
-    }
-
     // Fetch and process long context reasoning metrics
     const longContextRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/artificial-analysis-long-context-reasoning', { cache: 'no-store' });
     if (longContextRes.ok) {
@@ -292,17 +306,23 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
     const hallucination = scoreToRank(models, 'hallucination_rate', true);
     if (hallucination.length > 0) sources['aa:hallucination'] = hallucination;
 
-    const coding = scoreToRank(models, 'coding_index');
-    if (coding.length > 0) sources['aa:coding'] = coding;
-
-    const agentic = scoreToRank(models, 'agentic_index');
-    if (agentic.length > 0) sources['aa:agentic'] = agentic;
-
     const longContext = scoreToRank(models, 'lcr');
     if (longContext.length > 0) sources['aa:longcontext'] = longContext;
 
     const ifbench = scoreToRank(models, 'ifbench');
     if (ifbench.length > 0) sources['aa:ifbench'] = ifbench;
+
+    const livecodebench = scoreToRank(models, 'livecodebench');
+    if (livecodebench.length > 0) sources['aa:livecodebench'] = livecodebench;
+
+    const scicode = scoreToRank(models, 'scicode');
+    if (scicode.length > 0) sources['aa:scicode'] = scicode;
+
+    const terminalbench = scoreToRank(models, 'terminalbench_hard');
+    if (terminalbench.length > 0) sources['aa:terminalbench'] = terminalbench;
+
+    const tau2 = scoreToRank(models, 'tau2');
+    if (tau2.length > 0) sources['aa:tau2'] = tau2;
 
     return sources;
   } catch (error) {

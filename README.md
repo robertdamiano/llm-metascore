@@ -6,7 +6,7 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 
 A Next.js web application that fetches and displays real-time rankings from:
 - **General Intelligence**: LMArena (Text, Vision, Search) + Artificial Analysis (Omniscience Index, Hallucination Rate)
-- **Coding**: LMArena (WebDev) + SWE-bench (Bash Only) + Artificial Analysis (Coding Index, Agentic Index, Long Context Reasoning, IFBench)
+- **Coding**: LMArena (WebDev) + SWE-bench (Bash Only) + Artificial Analysis (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench)
 
 ### Setup
 
@@ -93,9 +93,7 @@ All data is fetched live from static HTML (no headless browser required):
 - **lmarena.ai/leaderboard**: Text, Vision, Search, WebDev category pages
 - **artificialanalysis.ai**:
   - Omniscience Index, Hallucination Rate: /evaluations/omniscience
-  - Coding Index, Agentic Index: /models
-  - Long Context Reasoning: /evaluations/artificial-analysis-long-context-reasoning
-  - IFBench: /evaluations/ifbench
+  - All individual coding benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages
 - **swebench.com**: Bash Only category benchmark
 
 ### Error Handling & Resilience
@@ -146,10 +144,10 @@ Data composition:
 - **General Intelligence** (5 sources):
     - LMArena: Text, Vision, Search
     - Artificial Analysis: Omniscience Index, Hallucination Rate (lower is better)
-- **Coding** (6 sources):
+- **Coding** (8 sources):
     - LMArena: WebDev
     - SWE-bench: Bash Only
-    - Artificial Analysis: Coding Index, Agentic Index, Long Context Reasoning, IFBench
+    - Artificial Analysis: LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench
 
 ## Vendor Mapping
 

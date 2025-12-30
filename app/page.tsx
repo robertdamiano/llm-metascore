@@ -25,8 +25,10 @@ export default function Home() {
     coding: [
       'lmarena:webdev',
       'swebench:bash',
-      'aa:coding',
-      'aa:agentic',
+      'aa:livecodebench',
+      'aa:scicode',
+      'aa:terminalbench',
+      'aa:tau2',
       'aa:longcontext',
       'aa:ifbench',
     ],
@@ -90,6 +92,10 @@ export default function Home() {
       .replace('agentic', 'Agentic')
       .replace('longcontext', 'Long Context')
       .replace('ifbench', 'IFBench')
+      .replace('livecodebench', 'LiveCodeBench')
+      .replace('scicode', 'SciCode')
+      .replace('terminalbench', 'TerminalBench')
+      .replace('tau2', 'Tau2')
       .replace('bash', 'Bash Only');
   };
 
@@ -148,12 +154,7 @@ export default function Home() {
   };
 
   const getModeDescription = () => {
-    switch (mode) {
-      case 'general':
-        return 'Rankings based on LMArena (Text/Vision/Search) and Artificial Analysis (Omniscience/Hallucination)';
-      case 'coding':
-        return 'Rankings based on LMArena WebDev, SWE-bench Bash, and Artificial Analysis (Coding/Agentic)';
-    }
+    return 'Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench';
   };
 
   return (
