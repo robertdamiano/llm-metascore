@@ -30,6 +30,8 @@ jobs:
 
       - name: Build Next.js
         run: npm run build
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
 
       - name: Build Firebase Functions
         run: cd functions && npm run build
