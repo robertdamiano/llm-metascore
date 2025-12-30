@@ -10,7 +10,8 @@
       ".env.local"
     ],
     "frameworksBackend": {
-      "region": "us-central1"
+      "region": "us-central1",
+      "memory": "512MiB"
     }
   },
   "functions": {

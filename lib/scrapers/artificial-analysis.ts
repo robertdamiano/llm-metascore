@@ -220,58 +220,58 @@ function scoreToRank(models: AAModel[], key: keyof AAModel, lowerIsBetter = fals
 
 export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEntry[]>> {
   try {
-    // Fetch omniscience metrics from /evaluations/omniscience
-    const omniscienceRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/omniscience', { cache: 'no-store' });
-    const omniscienceModels = omniscienceRes.ok ? parseRSCPayload(await omniscienceRes.text()) : [];
-
-    // Fetch coding/agentic metrics from /models page
-    const modelsRes = await fetchWithRetry('https://artificialanalysis.ai/models', { cache: 'no-store' });
-    const modelsPageModels = modelsRes.ok ? parseRSCPayload(await modelsRes.text()) : [];
-
-    // Fetch long context reasoning metrics from /evaluations/artificial-analysis-long-context-reasoning
-    const longContextRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/artificial-analysis-long-context-reasoning', { cache: 'no-store' });
-    const longContextModels = longContextRes.ok ? parseRSCPayload(await longContextRes.text()) : [];
-
-    // Fetch ifbench metrics from /evaluations/ifbench
-    const ifbenchRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/ifbench', { cache: 'no-store' });
-    const ifbenchModels = ifbenchRes.ok ? parseRSCPayload(await ifbenchRes.text()) : [];
-
-    // Merge models by name
+    // Merge models by name - process sequentially to reduce memory footprint
     const allModels = new Map<string, AAModel>();
 
-    // Add omniscience models (omniscience and hallucination_rate)
-    for (const model of omniscienceModels) {
-      allModels.set(model.short_name, { ...model });
-    }
-
-    // Merge in coding/agentic metrics from models page
-    for (const model of modelsPageModels) {
-      const existing = allModels.get(model.short_name);
-      if (existing) {
-        if (model.coding_index !== undefined) existing.coding_index = model.coding_index;
-        if (model.agentic_index !== undefined) existing.agentic_index = model.agentic_index;
-      } else {
+    // Fetch and process omniscience metrics from /evaluations/omniscience
+    const omniscienceRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/omniscience', { cache: 'no-store' });
+    if (omniscienceRes.ok) {
+      const omniscienceModels = parseRSCPayload(await omniscienceRes.text());
+      for (const model of omniscienceModels) {
         allModels.set(model.short_name, { ...model });
       }
     }
 
-    // Merge in long context reasoning metrics
-    for (const model of longContextModels) {
-      const existing = allModels.get(model.short_name);
-      if (existing) {
-        if (model.long_context_reasoning !== undefined) existing.long_context_reasoning = model.long_context_reasoning;
-      } else {
-        allModels.set(model.short_name, { ...model });
+    // Fetch and process coding/agentic metrics from /models page
+    const modelsRes = await fetchWithRetry('https://artificialanalysis.ai/models', { cache: 'no-store' });
+    if (modelsRes.ok) {
+      const modelsPageModels = parseRSCPayload(await modelsRes.text());
+      for (const model of modelsPageModels) {
+        const existing = allModels.get(model.short_name);
+        if (existing) {
+          if (model.coding_index !== undefined) existing.coding_index = model.coding_index;
+          if (model.agentic_index !== undefined) existing.agentic_index = model.agentic_index;
+        } else {
+          allModels.set(model.short_name, { ...model });
+        }
       }
     }
 
-    // Merge in ifbench metrics
-    for (const model of ifbenchModels) {
-      const existing = allModels.get(model.short_name);
-      if (existing) {
-        if (model.ifbench !== undefined) existing.ifbench = model.ifbench;
-      } else {
-        allModels.set(model.short_name, { ...model });
+    // Fetch and process long context reasoning metrics
+    const longContextRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/artificial-analysis-long-context-reasoning', { cache: 'no-store' });
+    if (longContextRes.ok) {
+      const longContextModels = parseRSCPayload(await longContextRes.text());
+      for (const model of longContextModels) {
+        const existing = allModels.get(model.short_name);
+        if (existing) {
+          if (model.long_context_reasoning !== undefined) existing.long_context_reasoning = model.long_context_reasoning;
+        } else {
+          allModels.set(model.short_name, { ...model });
+        }
+      }
+    }
+
+    // Fetch and process ifbench metrics
+    const ifbenchRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/ifbench', { cache: 'no-store' });
+    if (ifbenchRes.ok) {
+      const ifbenchModels = parseRSCPayload(await ifbenchRes.text());
+      for (const model of ifbenchModels) {
+        const existing = allModels.get(model.short_name);
+        if (existing) {
+          if (model.ifbench !== undefined) existing.ifbench = model.ifbench;
+        } else {
+          allModels.set(model.short_name, { ...model });
+        }
       }
     }
 
