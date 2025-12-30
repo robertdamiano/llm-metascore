@@ -7,7 +7,7 @@ interface AAModel {
   hallucination_rate?: number;
   coding_index?: number;
   agentic_index?: number;
-  long_context_reasoning?: number;
+  lcr?: number; // Long Context Reasoning
   ifbench?: number;
 }
 
@@ -148,20 +148,20 @@ function parseRSCPayload(html: string): AAModel[] {
       }
     }
 
-    // Extract long_context_reasoning values
+    // Extract lcr (Long Context Reasoning) values
     // Keep only the first occurrence per model
-    const longContextRegex = /\\"long_context_reasoning\\":([0-9.]+)/g;
-    let longContextMatch;
-    while ((longContextMatch = longContextRegex.exec(html)) !== null) {
-      const value = parseFloat(longContextMatch[1]);
+    const lcrRegex = /\\"lcr\\":([0-9.]+)/g;
+    let lcrMatch;
+    while ((lcrMatch = lcrRegex.exec(html)) !== null) {
+      const value = parseFloat(lcrMatch[1]);
       if (!isNaN(value)) {
-        const name = findClosestName(longContextMatch.index);
+        const name = findClosestName(lcrMatch.index);
         if (name) {
           const model = modelsByName.get(name) || { short_name: name };
 
           // Only keep the first occurrence
-          if (model.long_context_reasoning === undefined) {
-            model.long_context_reasoning = value;
+          if (model.lcr === undefined) {
+            model.lcr = value;
             modelsByName.set(name, model);
           }
         }
@@ -254,7 +254,7 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
       for (const model of longContextModels) {
         const existing = allModels.get(model.short_name);
         if (existing) {
-          if (model.long_context_reasoning !== undefined) existing.long_context_reasoning = model.long_context_reasoning;
+          if (model.lcr !== undefined) existing.lcr = model.lcr;
         } else {
           allModels.set(model.short_name, { ...model });
         }
@@ -298,7 +298,7 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
     const agentic = scoreToRank(models, 'agentic_index');
     if (agentic.length > 0) sources['aa:agentic'] = agentic;
 
-    const longContext = scoreToRank(models, 'long_context_reasoning');
+    const longContext = scoreToRank(models, 'lcr');
     if (longContext.length > 0) sources['aa:longcontext'] = longContext;
 
     const ifbench = scoreToRank(models, 'ifbench');
