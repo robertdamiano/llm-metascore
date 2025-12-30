@@ -1,4 +1,4 @@
-import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig, FetchAllSourcesResult, SourceFetchResult } from './types';
+import { ModelEntry, AggregatedEntry, SourceKey, LeaderboardConfig, FetchAllSourcesResult, SourceFetchResult, RankingOverride, RankingMode } from './types';
 import { identifyCreator, ALLOWED_CREATORS } from './vendors';
 import { aggregateAverageRank } from './aggregation';
 import { fetchLMArenaAllSources } from './scrapers/lmarena';
@@ -217,4 +217,62 @@ export function buildCodingRankings(
 
   const aggregated = aggregateAverageRank(rankedSources);
   return aggregated.filter(e => ALLOWED_CREATORS.has(e.name));
+}
+
+/**
+ * Applies per-source ranking overrides to source data before aggregation.
+ * Overrides modify the rank of specific creators in specific sources.
+ */
+export function applyPerSourceOverrides(
+  allSources: Record<string, ModelEntry[]>,
+  mode: RankingMode,
+  overrides: RankingOverride[]
+): Record<string, ModelEntry[]> {
+  const modifiedSources = { ...allSources };
+
+  // Get the sources relevant to this mode
+  const relevantSources = mode === 'general'
+    ? GENERAL_INTELLIGENCE.sources
+    : CODING.sources;
+
+  // Filter overrides for per-source targets in this mode
+  const perSourceOverrides = overrides.filter(
+    override => relevantSources.includes(override.target as SourceKey)
+  );
+
+  if (perSourceOverrides.length === 0) {
+    return modifiedSources;
+  }
+
+  // Group overrides by source for efficient processing
+  const overridesBySource = new Map<string, Map<string, number>>();
+  for (const override of perSourceOverrides) {
+    if (!overridesBySource.has(override.target)) {
+      overridesBySource.set(override.target, new Map());
+    }
+    overridesBySource.get(override.target)!.set(override.creatorName, override.overrideRank);
+  }
+
+  // Apply overrides to each source
+  for (const [sourceKey, creatorOverrides] of overridesBySource.entries()) {
+    const entries = modifiedSources[sourceKey];
+    if (!entries || entries.length === 0) continue;
+
+    // Modify entries to apply override ranks
+    const modifiedEntries = entries.map(entry => {
+      const creator = identifyCreator(entry.name);
+      const overrideRank = creatorOverrides.get(creator);
+
+      if (overrideRank !== undefined) {
+        // Apply the override rank
+        return { ...entry, rank: overrideRank };
+      }
+
+      return entry;
+    });
+
+    modifiedSources[sourceKey] = modifiedEntries;
+  }
+
+  return modifiedSources;
 }

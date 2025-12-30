@@ -1,4 +1,5 @@
 import { ModelEntry } from '../types';
+import { fetchWithRetry } from '../utils/retry';
 
 interface AAModel {
   short_name: string;
@@ -178,11 +179,11 @@ function scoreToRank(models: AAModel[], key: keyof AAModel, lowerIsBetter = fals
 export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEntry[]>> {
   try {
     // Fetch omniscience metrics from /evaluations/omniscience
-    const omniscienceRes = await fetch('https://artificialanalysis.ai/evaluations/omniscience', { cache: 'no-store' });
+    const omniscienceRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/omniscience', { cache: 'no-store' });
     const omniscienceModels = omniscienceRes.ok ? parseRSCPayload(await omniscienceRes.text()) : [];
 
     // Fetch coding/agentic metrics from /models page
-    const modelsRes = await fetch('https://artificialanalysis.ai/models', { cache: 'no-store' });
+    const modelsRes = await fetchWithRetry('https://artificialanalysis.ai/models', { cache: 'no-store' });
     const modelsPageModels = modelsRes.ok ? parseRSCPayload(await modelsRes.text()) : [];
 
     // Merge models by name

@@ -1,4 +1,5 @@
 import { ModelEntry } from '../types';
+import { fetchWithRetry } from '../utils/retry';
 
 interface SWEBenchResult {
   name: string;
@@ -13,7 +14,7 @@ interface SWEBenchCategory {
 
 export async function fetchSWEBench(): Promise<Record<string, ModelEntry[]>> {
   try {
-    const res = await fetch('https://www.swebench.com/', { cache: 'no-store' });
+    const res = await fetchWithRetry('https://www.swebench.com/', { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const html = await res.text();

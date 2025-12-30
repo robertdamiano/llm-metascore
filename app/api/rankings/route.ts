@@ -5,8 +5,10 @@ import {
   fetchAllSources,
   buildGeneralRankings,
   buildCodingRankings,
+  applyPerSourceOverrides,
 } from '@/lib/rankings';
-import { ModelEntry, SourceFetchResult, SourceKey } from '@/lib/types';
+import { ModelEntry, SourceFetchResult, SourceKey, RankingOverride, RankingMode, OverrideTarget } from '@/lib/types';
+import { applyAggregatedOverrides } from '@/lib/aggregation';
 
 // Initialize Firebase Admin (if not already)
 if (!getApps().length) {
@@ -194,6 +196,31 @@ async function writeRankingsToCache(mode: string, rankings: unknown) {
   }
 }
 
+async function fetchOverrides(): Promise<RankingOverride[]> {
+  try {
+    const snapshot = await db.collection('rankings_overrides').get();
+    const overrides: RankingOverride[] = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      overrides.push({
+        id: doc.id,
+        target: data.target as OverrideTarget,
+        creatorName: data.creatorName,
+        overrideRank: data.overrideRank,
+        createdAt: data.createdAt?.toDate() ?? new Date(),
+        updatedAt: data.updatedAt?.toDate() ?? new Date(),
+        reason: data.reason,
+      });
+    });
+
+    return overrides;
+  } catch (error) {
+    console.error('Error fetching overrides:', error);
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const mode = searchParams.get('mode') || 'general';
@@ -215,15 +242,26 @@ export async function GET(request: NextRequest) {
         mode,
         fetchResult.sourceResults
       );
-      let rankings;
 
+      // Fetch overrides from Firestore
+      const overrides = await fetchOverrides();
+
+      // Apply per-source overrides BEFORE aggregation
+      const overriddenSources = applyPerSourceOverrides(
+        mergedSources,
+        mode as RankingMode,
+        overrides
+      );
+
+      // Build aggregated rankings
+      let rankings;
       switch (mode) {
         case 'general': {
-          rankings = buildGeneralRankings(mergedSources);
+          rankings = buildGeneralRankings(overriddenSources);
           break;
         }
         case 'coding': {
-          rankings = buildCodingRankings(mergedSources);
+          rankings = buildCodingRankings(overriddenSources);
           break;
         }
         default:
@@ -232,6 +270,9 @@ export async function GET(request: NextRequest) {
             { status: 400 }
           );
       }
+
+      // Apply aggregated overrides AFTER aggregation
+      rankings = applyAggregatedOverrides(rankings, mode as RankingMode, overrides);
 
       // Build sourceTimestamps for backwards compatibility
       const sourceTimestamps: Record<string, string> = {};

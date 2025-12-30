@@ -1,21 +1,35 @@
 # Repository Guidelines
 
 ## Project Structure & Modules
-- Next.js app lives in `app/` (`app/page.tsx` UI, `app/api/rankings/route.ts` API, global styles in `app/globals.css`). Tailwind is configured via `tailwind.config.js`.
-- Shared logic sits in `lib/` (`lib/rankings.ts` aggregation orchestration, `lib/aggregation.ts`, vendor mapping in `lib/vendors.ts`, scrapers under `lib/scrapers/`).
-- Firebase Cloud Functions in `functions/` (`functions/src/index.ts` scheduled cache refresh).
+- Next.js app lives in `app/` (`app/page.tsx` UI, `app/admin/page.tsx` admin override panel, `app/api/rankings/route.ts` API, `app/api/admin/*` admin APIs, global styles in `app/globals.css`). Tailwind is configured via `tailwind.config.js`.
+- Shared logic sits in `lib/` (`lib/rankings.ts` aggregation orchestration with override application, `lib/aggregation.ts` with aggregated override logic, vendor mapping in `lib/vendors.ts`, scrapers under `lib/scrapers/`, retry utility in `lib/utils/retry.ts`).
+- Firebase Cloud Functions in `functions/` (`functions/src/index.ts` scheduled cache refresh with override application).
 
 ## Data Sources & Scrapers
 - **All scrapers** (`lib/scrapers/*.ts`): fetch live data from static HTML (no JS rendering needed)
-  - `lmarena.ts`: LMArena Text, Vision, Search, WebDev category pages (lmarena.ai/leaderboard)
-  - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai)
+  - `lmarena.ts`: LMArena Text, Vision, Search, WebDev category pages (lmarena.ai/leaderboard) - uses `fetchWithRetry()`
+  - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai) - uses `fetchWithRetry()`
     - Omniscience Index, Hallucination Rate: fetched from /evaluations/omniscience page
     - Coding Index, Agentic Index: fetched from /models page
     - **Important**: Omniscience values use the simple `"omniscience":VALUE` field, not the `"omniscience_breakdown"` nested data. The scraper checks context to skip breakdown values and uses only the main leaderboard score (range: -100 to 100).
-  - `swebench.ts`: SWE-bench Bash Only category (swebench.com)
+  - `swebench.ts`: SWE-bench Bash Only category (swebench.com) - uses `fetchWithRetry()`
+- **Retry logic**: All HTTP requests use `fetchWithRetry()` (`lib/utils/retry.ts`) with exponential backoff (1s → 2s → 4s + jitter). Retries on HTTP 429 (rate limit) and 500-599 (server errors), but not on 400-428 or 430-499 client errors.
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
 - All scrapers are imported by `lib/rankings.ts` which orchestrates fetching and aggregation
 - **Error handling**: `fetchAllSources()` wraps each scraper group (LMArena, AA, SWE-bench) in try-catch blocks. Failed sources return empty arrays and error details in `SourceFetchResult[]`, allowing rankings to be computed from available sources. The API route (`app/api/rankings/route.ts`) merges fresh data with cached fallbacks and returns per-source health status.
+
+## Admin Override System
+- **Admin UI**: Password-protected panel at `/admin` (`app/admin/page.tsx`) for manual ranking adjustments
+- **Authentication**: Simple password check via `ADMIN_PASSWORD` environment variable; password stored in sessionStorage after validation
+- **API Routes**:
+  - `app/api/admin/auth/route.ts`: POST endpoint for password validation
+  - `app/api/admin/overrides/route.ts`: GET/POST/DELETE for CRUD operations on overrides (requires `x-admin-password` header)
+- **Data Model**: `rankings_overrides` Firestore collection stores `RankingOverride` documents with fields: `target` (SourceKey or 'aggregated:general'/'aggregated:coding'), `creatorName`, `overrideRank`, `createdAt`, `updatedAt`, `reason`
+- **Override Application Flow**:
+  1. Per-source overrides applied BEFORE aggregation in `applyPerSourceOverrides()` (`lib/rankings.ts`)
+  2. Aggregated overrides applied AFTER aggregation in `applyAggregatedOverrides()` (`lib/aggregation.ts`)
+  3. Both API route and Cloud Functions fetch overrides and apply them during ranking computation
+- **Firestore Rules**: `rankings_overrides` collection is read-only for clients, write-only via admin SDK in API routes
 
 ## Build, Test, and Development Commands
 - Install deps: `npm install` (root) and `cd functions && npm install` (functions)

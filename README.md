@@ -33,8 +33,9 @@ For local development, you need Firebase Admin credentials:
 3. **Add credentials to `.env.local`**:
    ```bash
    FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"llm-metascore",...}'
+   ADMIN_PASSWORD=your-secure-password-here
    ```
-   (Paste the JSON as a single-line string)
+   (Paste the Firebase JSON as a single-line string, and set a secure admin password)
 
 4. **Run the development server**:
    ```bash
@@ -97,12 +98,40 @@ All data is fetched live from static HTML (no headless browser required):
 
 ### Error Handling & Resilience
 
-The application implements graceful degradation:
+The application implements robust error handling:
+
+**Retry Logic with Exponential Backoff**:
+- All HTTP requests use exponential backoff retry logic (1s → 2s → 4s with jitter)
+- Automatically retries on HTTP 429 (rate limit) and 500-599 (server errors)
+- Prevents thundering herd with randomized jitter
+
+**Graceful Degradation**:
 - Each data source is fetched independently with error handling
 - If a source fails, rankings are computed from remaining successful sources
 - API responses include per-source health status (`success`, `cached`, or `failed`)
 - Failed sources fall back to cached data when available
 - The app remains functional even when individual sources are temporarily unavailable
+
+### Admin Override System
+
+The application includes a password-protected admin panel for manual ranking adjustments at `/admin`.
+
+**Use Cases**:
+- Handle tie scenarios not captured by automated ranking
+- Adjust rankings for older LLMs that perform exceptionally well on specific benchmarks
+- Override both per-source ranks and final aggregated ranks
+
+**Features**:
+- Password-protected UI (set via `ADMIN_PASSWORD` environment variable)
+- Override individual creator ranks in any source or aggregated ranking
+- Overrides persist across automated refreshes
+- Track override history with timestamps and optional reason notes
+
+**How it Works**:
+1. **Per-Source Overrides**: Applied BEFORE aggregation (e.g., set "OpenAI" to rank 1 in "lmarena:text")
+2. **Aggregated Overrides**: Applied AFTER aggregation (e.g., set "Google" to rank 2 in final "coding" rankings)
+3. **Persistence**: Stored in Firestore `rankings_overrides` collection
+4. **Integration**: Cloud Functions and API routes automatically apply overrides during ranking computation
 
 ## Aggregation Rules
 

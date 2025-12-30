@@ -11,5 +11,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if false;  // Only via admin SDK in cloud functions
     }
+
+    // Ranking overrides - read-only for all, write only via admin SDK
+    match /rankings_overrides/{document=**} {
+      allow read: if true;
+      allow write: if false;  // Only via admin SDK in API routes
+    }
   }
 }

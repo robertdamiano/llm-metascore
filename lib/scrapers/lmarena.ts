@@ -1,4 +1,5 @@
 import { ModelEntry } from '../types';
+import { fetchWithRetry } from '../utils/retry';
 
 type LMArenaCategory = 'text' | 'vision' | 'search' | 'webdev';
 
@@ -110,7 +111,7 @@ function parseCategoryPage(html: string, category: LMArenaCategory): ModelEntry[
 
 async function fetchCategory(category: LMArenaCategory): Promise<ModelEntry[]> {
   try {
-    const res = await fetch(`https://lmarena.ai/leaderboard/${category}`, { cache: 'no-store' });
+    const res = await fetchWithRetry(`https://lmarena.ai/leaderboard/${category}`, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return parseCategoryPage(await res.text(), category);
   } catch (error) {

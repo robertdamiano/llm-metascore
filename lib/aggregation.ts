@@ -1,4 +1,4 @@
-import { AggregatedEntry } from './types';
+import { AggregatedEntry, RankingOverride, RankingMode } from './types';
 import { ALLOWED_CREATORS } from './vendors';
 
 export function aggregateAverageRank(
@@ -66,4 +66,48 @@ export function aggregateAverageRank(
   aggregated.sort((a, b) => a.aggregatedRank - b.aggregatedRank);
 
   return aggregated;
+}
+
+/**
+ * Applies aggregated ranking overrides to final aggregated rankings.
+ * Overrides directly set the aggregatedRank for specific creators.
+ */
+export function applyAggregatedOverrides(
+  aggregated: AggregatedEntry[],
+  mode: RankingMode,
+  overrides: RankingOverride[]
+): AggregatedEntry[] {
+  const target = `aggregated:${mode}`;
+
+  // Filter overrides for this aggregated target
+  const aggregatedOverrides = overrides.filter(
+    override => override.target === target
+  );
+
+  if (aggregatedOverrides.length === 0) {
+    return aggregated;
+  }
+
+  // Build override map: creator name -> override rank
+  const overrideMap = new Map<string, number>();
+  for (const override of aggregatedOverrides) {
+    overrideMap.set(override.creatorName, override.overrideRank);
+  }
+
+  // Apply overrides to aggregated rankings
+  const modified = aggregated.map(entry => {
+    const overrideRank = overrideMap.get(entry.name);
+    if (overrideRank !== undefined) {
+      return {
+        ...entry,
+        aggregatedRank: overrideRank,
+      };
+    }
+    return entry;
+  });
+
+  // Re-sort by aggregated rank after applying overrides
+  modified.sort((a, b) => a.aggregatedRank - b.aggregatedRank);
+
+  return modified;
 }

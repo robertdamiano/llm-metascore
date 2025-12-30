@@ -59,3 +59,17 @@ export interface FetchAllSourcesResult {
   sources: Record<string, ModelEntry[]>;
   sourceResults: SourceFetchResult[];
 }
+
+// Override target - can be per-source or aggregated
+export type OverrideTarget = SourceKey | 'aggregated:general' | 'aggregated:coding';
+
+// Ranking override stored in Firestore
+export interface RankingOverride {
+  id: string; // Firestore auto-generated document ID
+  target: OverrideTarget; // Which source or aggregated ranking to override
+  creatorName: string; // 'OpenAI' | 'Google' | 'Anthropic' | 'xAI'
+  overrideRank: number; // The rank to set
+  createdAt: Date; // When the override was created
+  updatedAt: Date; // When the override was last updated
+  reason?: string; // Optional note explaining why the override was made
+}
