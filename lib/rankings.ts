@@ -7,7 +7,7 @@ import { fetchSWEBench } from './scrapers/swebench';
 import { fetchLiveBench } from './scrapers/livebench';
 
 // Leaderboard definitions
-const GENERAL_INTELLIGENCE: LeaderboardConfig = {
+export const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   name: 'General Intelligence',
   description: 'Rankings aggregated from Artificial Analysis, LMArena, and LiveBench',
   sources: [
@@ -24,7 +24,7 @@ const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   minLabsRequired: 3,
 };
 
-const CODING: LeaderboardConfig = {
+export const CODING: LeaderboardConfig = {
   name: 'Coding',
   description: 'Rankings aggregated from Artificial Analysis, LMArena, and SWE-bench',
   sources: [

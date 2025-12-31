@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AggregatedEntry, RankingMode } from '@/lib/types';
+import { GENERAL_INTELLIGENCE, CODING } from '@/lib/rankings';
 
 export default function Home() {
   const [mode, setMode] = useState<RankingMode>('general');
@@ -82,28 +83,26 @@ export default function Home() {
   }, [fetchRankings]);
 
   const formatSourceName = (source: string): string => {
-    return source
-      .replace('lmarena:', 'LMArena ')
-      .replace('aa:', 'Artificial Analysis ')
-      .replace('swebench:', 'SWE-bench ')
-      .replace('livebench:', 'LiveBench ')
-      .replace('longcontext', 'Long Context')
-      .replace('livecodebench', 'LiveCodeBench')
-      .replace('terminalbench', 'TerminalBench')
-      .replace('text', 'Text')
-      .replace('vision', 'Vision')
-      .replace('search', 'Search')
-      .replace('webdev', 'WebDev')
-      .replace('omniscience', 'Omniscience')
-      .replace('hallucination', 'Hallucination')
-      .replace('gpqa', 'GPQA Diamond')
-      .replace('global', 'Global')
-      .replace('coding', 'Coding')
-      .replace('agentic', 'Agentic')
-      .replace('ifbench', 'IFBench')
-      .replace('scicode', 'SciCode')
-      .replace('tau2', 'Tau2')
-      .replace('bash', 'Bash Only');
+    // Handle full source keys first to avoid partial replacements
+    const fullMatches: Record<string, string> = {
+      'lmarena:text': 'LMArena Text',
+      'lmarena:vision': 'LMArena Vision',
+      'lmarena:search': 'LMArena Search',
+      'lmarena:webdev': 'LMArena WebDev',
+      'aa:longcontext': 'Artificial Analysis Long Context',
+      'aa:livecodebench': 'Artificial Analysis LiveCodeBench',
+      'aa:terminalbench': 'Artificial Analysis TerminalBench',
+      'aa:omniscience': 'Artificial Analysis Omniscience',
+      'aa:hallucination': 'Artificial Analysis Hallucination',
+      'aa:gpqa': 'Artificial Analysis GPQA Diamond',
+      'aa:ifbench': 'Artificial Analysis IFBench',
+      'aa:scicode': 'Artificial Analysis SciCode',
+      'aa:tau2': 'Artificial Analysis Tau2',
+      'livebench:global': 'LiveBench Global',
+      'swebench:bash': 'SWE-bench Bash Only',
+    };
+
+    return fullMatches[source] || source;
   };
 
   const getCurrentRankings = () => {
@@ -161,7 +160,7 @@ export default function Home() {
   };
 
   const getModeDescription = () => {
-    return 'Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench';
+    return mode === 'general' ? GENERAL_INTELLIGENCE.description : CODING.description;
   };
 
   return (
