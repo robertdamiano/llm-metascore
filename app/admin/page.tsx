@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { RankingOverride, OverrideTarget, RankingMode } from '@/lib/types';
 
-const CREATORS = ['OpenAI', 'Google', 'Anthropic', 'xAI'] as const;
+const CREATORS = ['Anthropic', 'Google', 'OpenAI', 'xAI'] as const;
 
 const SOURCE_OPTIONS: { value: OverrideTarget; label: string }[] = [
   // General mode sources
@@ -45,7 +45,7 @@ export default function AdminPage() {
 
   // Form state
   const [formTarget, setFormTarget] = useState<OverrideTarget>('aggregated:general');
-  const [formCreator, setFormCreator] = useState<typeof CREATORS[number]>('OpenAI');
+  const [formCreator, setFormCreator] = useState<typeof CREATORS[number]>('Anthropic');
   const [formRank, setFormRank] = useState<string>('1');
   const [formReason, setFormReason] = useState('');
 
@@ -194,34 +194,34 @@ export default function AdminPage() {
 
   // Filter overrides and sources by mode
   const getRelevantSources = () => {
-    if (mode === 'general') {
-      return SOURCE_OPTIONS.filter(
-        opt =>
-          opt.value.includes('aa:omniscience') ||
-          opt.value.includes('aa:hallucination') ||
-          opt.value.includes('aa:gpqa') ||
-          opt.value.includes('lmarena:text') ||
-          opt.value.includes('lmarena:vision') ||
-          opt.value.includes('lmarena:search') ||
-          opt.value.includes('livebench:global') ||
-          (opt.value.includes('aa:ifbench') && !opt.value.includes('coding')) ||
-          (opt.value.includes('aa:longcontext') && !opt.value.includes('coding')) ||
-          opt.value === 'aggregated:general'
-      );
-    } else {
-      return SOURCE_OPTIONS.filter(
-        opt =>
-          opt.value.includes('aa:livecodebench') ||
-          opt.value.includes('aa:scicode') ||
-          opt.value.includes('aa:terminalbench') ||
-          opt.value.includes('aa:tau2') ||
-          opt.value.includes('lmarena:webdev') ||
-          opt.value.includes('swebench') ||
-          (opt.value.includes('aa:longcontext') && !opt.value.includes('general')) ||
-          (opt.value.includes('aa:ifbench') && !opt.value.includes('general')) ||
-          opt.value === 'aggregated:coding'
-      );
-    }
+    const generalSources = [
+      'aa:omniscience',
+      'aa:hallucination',
+      'aa:gpqa',
+      'aa:ifbench',
+      'aa:longcontext',
+      'lmarena:text',
+      'lmarena:vision',
+      'lmarena:search',
+      'livebench:global',
+      'aggregated:general',
+    ];
+
+    const codingSources = [
+      'aa:livecodebench',
+      'aa:scicode',
+      'aa:terminalbench',
+      'aa:tau2',
+      'aa:longcontext',
+      'aa:ifbench',
+      'lmarena:webdev',
+      'swebench:bash',
+      'aggregated:coding',
+    ];
+
+    const relevantValues = mode === 'general' ? generalSources : codingSources;
+
+    return SOURCE_OPTIONS.filter(opt => relevantValues.includes(opt.value));
   };
 
   const getRelevantOverrides = () => {

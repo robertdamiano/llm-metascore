@@ -327,7 +327,18 @@ export default function Home() {
                       {showDetails && (
                         <div className="mt-3 space-y-1">
                           {Object.entries(entry.ranks)
-                            .sort(([a], [b]) => a.localeCompare(b))
+                            .sort(([a], [b]) => {
+                              // Custom sort order: AA first, then LMArena, then SWE-bench, then LiveBench
+                              const order = ['aa:', 'lmarena:', 'swebench:', 'livebench:'];
+                              const aPrefix = order.findIndex(prefix => a.startsWith(prefix));
+                              const bPrefix = order.findIndex(prefix => b.startsWith(prefix));
+
+                              if (aPrefix !== bPrefix) {
+                                return aPrefix - bPrefix;
+                              }
+
+                              return a.localeCompare(b);
+                            })
                             .map(([source, rank]) => (
                               <div
                                 key={source}
