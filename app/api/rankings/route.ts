@@ -272,7 +272,7 @@ export async function GET(request: NextRequest) {
       );
 
       // Apply per-source overrides BEFORE aggregation
-      const { sources: overriddenSources, overriddenSources: overriddenSourcesSet } = applyPerSourceOverrides(
+      const { sources: overriddenSources, overridesBySource } = applyPerSourceOverrides(
         mergedSources,
         mode as RankingMode,
         overrides
@@ -282,11 +282,11 @@ export async function GET(request: NextRequest) {
       let rankings;
       switch (mode) {
         case 'general': {
-          rankings = buildGeneralRankings(overriddenSources, overriddenSourcesSet);
+          rankings = buildGeneralRankings(overriddenSources, overridesBySource);
           break;
         }
         case 'coding': {
-          rankings = buildCodingRankings(overriddenSources, overriddenSourcesSet);
+          rankings = buildCodingRankings(overriddenSources, overridesBySource);
           break;
         }
         default:

@@ -40,7 +40,7 @@ export const CODING: LeaderboardConfig = {
   minLabsRequired: 3,
 };
 
-function bestByCreatorEntries(entries: ModelEntry[], preserveRanks = false): Array<[string, number]> {
+function bestByCreatorEntries(entries: ModelEntry[], creatorsToPreserve: Set<string> = new Set()): Array<[string, number]> {
   const creatorRanks = new Map<string, number>();
 
   for (const entry of entries) {
@@ -57,24 +57,54 @@ function bestByCreatorEntries(entries: ModelEntry[], preserveRanks = false): Arr
     return [];
   }
 
-  // Dense, tie-preserving re-ranking (skip if preserveRanks is true to maintain override ranks)
-  if (preserveRanks) {
+  // Dense re-ranking with selective preservation:
+  // - For creators in creatorsToPreserve: keep their exact rank (override rank)
+  // - For other creators: apply dense re-ranking to compress gaps
+
+  if (creatorsToPreserve.size === 0) {
+    // No overrides - normal dense re-ranking for everyone
+    const uniqueRanks = Array.from(new Set(creatorRanks.values())).sort((a, b) => a - b);
+    const denseMap = new Map(uniqueRanks.map((rank, index) => [rank, index + 1]));
+
     return Array.from(creatorRanks.entries())
+      .map(([name, rank]): [string, number] => [name, denseMap.get(rank)!])
       .sort((a, b) => {
         if (a[1] !== b[1]) return a[1] - b[1];
         return a[0].localeCompare(b[0]);
       });
   }
 
-  const uniqueRanks = Array.from(new Set(creatorRanks.values())).sort((a, b) => a - b);
-  const denseMap = new Map(uniqueRanks.map((rank, index) => [rank, index + 1]));
+  // Mixed mode: some creators have overrides, others don't
+  // Strategy: Apply dense re-ranking only to non-overridden creators
+  const preservedEntries: Array<[string, number]> = [];
+  const nonPreservedRanks: number[] = [];
 
-  return Array.from(creatorRanks.entries())
-    .map(([name, rank]): [string, number] => [name, denseMap.get(rank)!])
-    .sort((a, b) => {
-      if (a[1] !== b[1]) return a[1] - b[1];
-      return a[0].localeCompare(b[0]);
-    });
+  for (const [creator, rank] of creatorRanks.entries()) {
+    if (creatorsToPreserve.has(creator)) {
+      preservedEntries.push([creator, rank]); // Keep override rank as-is
+    } else {
+      nonPreservedRanks.push(rank);
+    }
+  }
+
+  // Dense re-rank the non-preserved creators
+  const uniqueNonPreservedRanks = Array.from(new Set(nonPreservedRanks)).sort((a, b) => a - b);
+  const denseMap = new Map(uniqueNonPreservedRanks.map((rank, index) => [rank, index + 1]));
+
+  const result: Array<[string, number]> = [...preservedEntries];
+  for (const [creator, rank] of creatorRanks.entries()) {
+    if (!creatorsToPreserve.has(creator)) {
+      result.push([creator, denseMap.get(rank)!]);
+    }
+  }
+
+  // Sort by rank, then by name
+  result.sort((a, b) => {
+    if (a[1] !== b[1]) return a[1] - b[1];
+    return a[0].localeCompare(b[0]);
+  });
+
+  return result;
 }
 
 // Filter sources that have representation from at least N of the 4 labs
@@ -227,7 +257,7 @@ export async function fetchCodingRankings(): Promise<AggregatedEntry[]> {
 
 export function buildGeneralRankings(
   allSources: Record<string, ModelEntry[]>,
-  overriddenSources: Set<string> = new Set()
+  overridesBySource: Map<string, Set<string>> = new Map()
 ): AggregatedEntry[] {
   const validSources = filterSourcesByLabCoverage(
     allSources,
@@ -237,9 +267,9 @@ export function buildGeneralRankings(
 
   const rankedSources: Record<string, Array<[string, number]>> = {};
   for (const [key, entries] of Object.entries(validSources)) {
-    // Preserve ranks for sources that have overrides applied
-    const preserveRanks = overriddenSources.has(key);
-    rankedSources[key] = bestByCreatorEntries(entries, preserveRanks);
+    // Get the set of creators with overrides for this source
+    const creatorsToPreserve = overridesBySource.get(key) || new Set<string>();
+    rankedSources[key] = bestByCreatorEntries(entries, creatorsToPreserve);
   }
 
   const aggregated = aggregateAverageRank(rankedSources);
@@ -248,7 +278,7 @@ export function buildGeneralRankings(
 
 export function buildCodingRankings(
   allSources: Record<string, ModelEntry[]>,
-  overriddenSources: Set<string> = new Set()
+  overridesBySource: Map<string, Set<string>> = new Map()
 ): AggregatedEntry[] {
   const validSources = filterSourcesByLabCoverage(
     allSources,
@@ -258,9 +288,9 @@ export function buildCodingRankings(
 
   const rankedSources: Record<string, Array<[string, number]>> = {};
   for (const [key, entries] of Object.entries(validSources)) {
-    // Preserve ranks for sources that have overrides applied
-    const preserveRanks = overriddenSources.has(key);
-    rankedSources[key] = bestByCreatorEntries(entries, preserveRanks);
+    // Get the set of creators with overrides for this source
+    const creatorsToPreserve = overridesBySource.get(key) || new Set<string>();
+    rankedSources[key] = bestByCreatorEntries(entries, creatorsToPreserve);
   }
 
   const aggregated = aggregateAverageRank(rankedSources);
@@ -270,15 +300,15 @@ export function buildCodingRankings(
 /**
  * Applies per-source ranking overrides to source data before aggregation.
  * Overrides modify the rank of specific creators in specific sources.
- * Returns modified sources and a Set of source keys that have overrides applied.
+ * Returns modified sources and a Map of source keys to Sets of overridden creator names.
  */
 export function applyPerSourceOverrides(
   allSources: Record<string, ModelEntry[]>,
   mode: RankingMode,
   overrides: RankingOverride[]
-): { sources: Record<string, ModelEntry[]>; overriddenSources: Set<string> } {
+): { sources: Record<string, ModelEntry[]>; overridesBySource: Map<string, Set<string>> } {
   const modifiedSources = { ...allSources };
-  const overriddenSources = new Set<string>();
+  const overridesBySource = new Map<string, Set<string>>();
 
   // Get the sources relevant to this mode
   const relevantSources = mode === 'general'
@@ -291,24 +321,24 @@ export function applyPerSourceOverrides(
   );
 
   if (perSourceOverrides.length === 0) {
-    return { sources: modifiedSources, overriddenSources };
+    return { sources: modifiedSources, overridesBySource };
   }
 
   // Group overrides by source for efficient processing
-  const overridesBySource = new Map<string, Map<string, number>>();
+  const overrideRanksBySource = new Map<string, Map<string, number>>();
   for (const override of perSourceOverrides) {
-    if (!overridesBySource.has(override.target)) {
-      overridesBySource.set(override.target, new Map());
+    if (!overrideRanksBySource.has(override.target)) {
+      overrideRanksBySource.set(override.target, new Map());
+      overridesBySource.set(override.target, new Set());
     }
-    overridesBySource.get(override.target)!.set(override.creatorName, override.overrideRank);
+    overrideRanksBySource.get(override.target)!.set(override.creatorName, override.overrideRank);
+    overridesBySource.get(override.target)!.add(override.creatorName);
   }
 
   // Apply overrides to each source
-  for (const [sourceKey, creatorOverrides] of overridesBySource.entries()) {
+  for (const [sourceKey, creatorOverrides] of overrideRanksBySource.entries()) {
     const entries = modifiedSources[sourceKey];
     if (!entries || entries.length === 0) continue;
-
-    overriddenSources.add(sourceKey);
 
     // Modify entries to apply override ranks
     const modifiedEntries = entries.map(entry => {
@@ -326,5 +356,5 @@ export function applyPerSourceOverrides(
     modifiedSources[sourceKey] = modifiedEntries;
   }
 
-  return { sources: modifiedSources, overriddenSources };
+  return { sources: modifiedSources, overridesBySource };
 }
