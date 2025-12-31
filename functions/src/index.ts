@@ -154,15 +154,15 @@ export const refreshRankingsCache = functions.pubsub
       console.log(`Fetched ${overrides.length} ranking overrides`);
 
       // Apply per-source overrides for general mode
-      const generalSourcesWithOverrides = applyPerSourceOverrides(mergedSources, 'general', overrides);
+      const { sources: generalSourcesWithOverrides, overriddenSources: generalOverriddenSources } = applyPerSourceOverrides(mergedSources, 'general', overrides);
       // Build and apply aggregated overrides for general mode
-      let generalRankings = buildGeneralRankings(generalSourcesWithOverrides);
+      let generalRankings = buildGeneralRankings(generalSourcesWithOverrides, generalOverriddenSources);
       generalRankings = applyAggregatedOverrides(generalRankings, 'general', overrides);
 
       // Apply per-source overrides for coding mode
-      const codingSourcesWithOverrides = applyPerSourceOverrides(mergedSources, 'coding', overrides);
+      const { sources: codingSourcesWithOverrides, overriddenSources: codingOverriddenSources } = applyPerSourceOverrides(mergedSources, 'coding', overrides);
       // Build and apply aggregated overrides for coding mode
-      let codingRankings = buildCodingRankings(codingSourcesWithOverrides);
+      let codingRankings = buildCodingRankings(codingSourcesWithOverrides, codingOverriddenSources);
       codingRankings = applyAggregatedOverrides(codingRankings, 'coding', overrides);
 
       const aggregatedBatch = db.batch();
@@ -237,15 +237,15 @@ export const forceRefreshCache = functions.https.onRequest(async (req, res) => {
     console.log(`Fetched ${overrides.length} ranking overrides`);
 
     // Apply per-source overrides for general mode
-    const generalSourcesWithOverrides = applyPerSourceOverrides(mergedSources, 'general', overrides);
+    const { sources: generalSourcesWithOverrides, overriddenSources: generalOverriddenSources } = applyPerSourceOverrides(mergedSources, 'general', overrides);
     // Build and apply aggregated overrides for general mode
-    let generalRankings = buildGeneralRankings(generalSourcesWithOverrides);
+    let generalRankings = buildGeneralRankings(generalSourcesWithOverrides, generalOverriddenSources);
     generalRankings = applyAggregatedOverrides(generalRankings, 'general', overrides);
 
     // Apply per-source overrides for coding mode
-    const codingSourcesWithOverrides = applyPerSourceOverrides(mergedSources, 'coding', overrides);
+    const { sources: codingSourcesWithOverrides, overriddenSources: codingOverriddenSources } = applyPerSourceOverrides(mergedSources, 'coding', overrides);
     // Build and apply aggregated overrides for coding mode
-    let codingRankings = buildCodingRankings(codingSourcesWithOverrides);
+    let codingRankings = buildCodingRankings(codingSourcesWithOverrides, codingOverriddenSources);
     codingRankings = applyAggregatedOverrides(codingRankings, 'coding', overrides);
 
     const aggregatedBatch = db.batch();

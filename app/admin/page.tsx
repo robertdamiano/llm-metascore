@@ -43,8 +43,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form state
-  const [formTarget, setFormTarget] = useState<OverrideTarget>('aggregated:general');
+  // Form state - default to first source in general mode
+  const [formTarget, setFormTarget] = useState<OverrideTarget>('aa:omniscience');
   const [formCreator, setFormCreator] = useState<typeof CREATORS[number]>('Anthropic');
   const [formRank, setFormRank] = useState<string>('1');
   const [formReason, setFormReason] = useState('');
@@ -297,7 +297,11 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex gap-2">
             <button
-              onClick={() => setMode('general')}
+              onClick={() => {
+                setMode('general');
+                // Auto-select first source when switching to general mode
+                setFormTarget('aa:omniscience');
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 mode === 'general'
                   ? 'bg-blue-600 text-white'
@@ -307,7 +311,11 @@ export default function AdminPage() {
               General Mode
             </button>
             <button
-              onClick={() => setMode('coding')}
+              onClick={() => {
+                setMode('coding');
+                // Auto-select first source when switching to coding mode
+                setFormTarget('aa:livecodebench');
+              }}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 mode === 'coding'
                   ? 'bg-blue-600 text-white'
@@ -333,12 +341,18 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Source/Target
+                Source/Target {formTarget.startsWith('aggregated:') && (
+                  <span className="text-amber-600 font-semibold">(Final Ranking)</span>
+                )}
               </label>
               <select
                 value={formTarget}
                 onChange={(e) => setFormTarget(e.target.value as OverrideTarget)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  formTarget.startsWith('aggregated:')
+                    ? 'border-amber-400 focus:ring-amber-500 bg-amber-50'
+                    : 'border-gray-300 focus:ring-blue-500'
+                }`}
               >
                 {getRelevantSources().map(opt => (
                   <option key={opt.value} value={opt.value}>
@@ -346,6 +360,11 @@ export default function AdminPage() {
                   </option>
                 ))}
               </select>
+              {formTarget.startsWith('aggregated:') && (
+                <p className="text-xs text-amber-700 mt-1">
+                  ⚠️ This overrides the final ranking after all sources are aggregated
+                </p>
+              )}
             </div>
 
             <div>
