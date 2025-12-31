@@ -134,6 +134,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           target: formTarget,
+          mode: mode, // Include current mode
           creatorName: formCreator,
           overrideRank: rank,
           reason: formReason || undefined,

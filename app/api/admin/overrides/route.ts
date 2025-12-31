@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp, getApps, cert, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { RankingOverride, OverrideTarget } from '@/lib/types';
+import { RankingOverride, OverrideTarget, RankingMode } from '@/lib/types';
 
 // Initialize Firebase Admin (if not already)
 if (!getApps().length) {
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
       overrides.push({
         id: doc.id,
         target: data.target as OverrideTarget,
+        mode: (data.mode as RankingMode) || 'general', // Default to general for backward compatibility
         creatorName: data.creatorName,
         overrideRank: data.overrideRank,
         createdAt: data.createdAt?.toDate() ?? new Date(),
@@ -87,12 +88,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { target, creatorName, overrideRank, reason } = body;
+    const { target, mode, creatorName, overrideRank, reason } = body;
 
     // Validate required fields
-    if (!target || !creatorName || typeof overrideRank !== 'number') {
+    if (!target || !mode || !creatorName || typeof overrideRank !== 'number') {
       return NextResponse.json(
-        { error: 'Missing required fields: target, creatorName, overrideRank' },
+        { error: 'Missing required fields: target, mode, creatorName, overrideRank' },
+        { status: 400 }
+      );
+    }
+
+    // Validate mode
+    if (mode !== 'general' && mode !== 'coding') {
+      return NextResponse.json(
+        { error: 'mode must be either "general" or "coding"' },
         { status: 400 }
       );
     }
@@ -107,10 +116,11 @@ export async function POST(request: NextRequest) {
 
     const now = Timestamp.now();
 
-    // Check if override already exists for this target+creator combination
+    // Check if override already exists for this target+creator+mode combination
     const existing = await db
       .collection('rankings_overrides')
       .where('target', '==', target)
+      .where('mode', '==', mode)
       .where('creatorName', '==', creatorName)
       .get();
 
@@ -131,6 +141,7 @@ export async function POST(request: NextRequest) {
         override: {
           id: updatedDoc.id,
           target: data?.target,
+          mode: data?.mode,
           creatorName: data?.creatorName,
           overrideRank: data?.overrideRank,
           createdAt: data?.createdAt?.toDate(),
@@ -143,6 +154,7 @@ export async function POST(request: NextRequest) {
     // Create new override
     const docRef = await db.collection('rankings_overrides').add({
       target,
+      mode,
       creatorName,
       overrideRank,
       createdAt: now,
@@ -158,6 +170,7 @@ export async function POST(request: NextRequest) {
       override: {
         id: newDoc.id,
         target: data?.target,
+        mode: data?.mode,
         creatorName: data?.creatorName,
         overrideRank: data?.overrideRank,
         createdAt: data?.createdAt?.toDate(),

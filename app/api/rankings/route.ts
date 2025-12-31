@@ -206,6 +206,7 @@ async function fetchOverrides(): Promise<RankingOverride[]> {
       overrides.push({
         id: doc.id,
         target: data.target as OverrideTarget,
+        mode: (data.mode as RankingMode) || 'general', // Default to general for backward compatibility
         creatorName: data.creatorName,
         overrideRank: data.overrideRank,
         createdAt: data.createdAt?.toDate() ?? new Date(),
@@ -230,7 +231,10 @@ export async function GET(request: NextRequest) {
     let result;
 
     // Fetch overrides FIRST - we always need these
-    const overrides = await fetchOverrides();
+    const allOverrides = await fetchOverrides();
+
+    // Filter overrides for the current mode
+    const overrides = allOverrides.filter(override => override.mode === mode);
 
     // Check if there are any per-source overrides for this mode
     const relevantSources = mode === 'general'

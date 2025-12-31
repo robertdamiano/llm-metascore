@@ -10,7 +10,7 @@ const db = admin.firestore();
 // Import scraper functions - we need to compile lib/ scrapers or duplicate them
 // For now, we'll import the TypeScript files directly and handle compilation
 import { fetchAllSources, buildGeneralRankings, buildCodingRankings, applyPerSourceOverrides } from '../../lib/rankings';
-import { ModelEntry, RankingOverride, OverrideTarget } from '../../lib/types';
+import { ModelEntry, RankingOverride, OverrideTarget, RankingMode } from '../../lib/types';
 import { applyAggregatedOverrides } from '../../lib/aggregation';
 
 function mergeByName(existing: ModelEntry[], incoming: ModelEntry[]): ModelEntry[] {
@@ -92,6 +92,7 @@ async function fetchOverrides(): Promise<RankingOverride[]> {
       overrides.push({
         id: doc.id,
         target: data.target as OverrideTarget,
+        mode: (data.mode as RankingMode) || 'general', // Default to general for backward compatibility
         creatorName: data.creatorName,
         overrideRank: data.overrideRank,
         createdAt: data.createdAt?.toDate() ?? new Date(),

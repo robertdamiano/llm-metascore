@@ -74,6 +74,7 @@ export type OverrideTarget = SourceKey | 'aggregated:general' | 'aggregated:codi
 export interface RankingOverride {
   id: string; // Firestore auto-generated document ID
   target: OverrideTarget; // Which source or aggregated ranking to override
+  mode: RankingMode; // Which mode this override applies to (general or coding)
   creatorName: string; // 'OpenAI' | 'Google' | 'Anthropic' | 'xAI'
   overrideRank: number; // The rank to set
   createdAt: Date; // When the override was created
