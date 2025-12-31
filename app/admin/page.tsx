@@ -6,26 +6,26 @@ import { RankingOverride, OverrideTarget, RankingMode } from '@/lib/types';
 const CREATORS = ['Anthropic', 'Google', 'OpenAI', 'xAI'] as const;
 
 const SOURCE_OPTIONS: { value: OverrideTarget; label: string }[] = [
-  // General mode sources
+  // Artificial Analysis sources
   { value: 'aa:omniscience', label: 'AA Omniscience' },
   { value: 'aa:hallucination', label: 'AA Hallucination' },
   { value: 'aa:gpqa', label: 'AA GPQA Diamond' },
   { value: 'aa:ifbench', label: 'AA IFBench' },
   { value: 'aa:longcontext', label: 'AA Long Context' },
-  { value: 'lmarena:text', label: 'LMArena Text' },
-  { value: 'lmarena:vision', label: 'LMArena Vision' },
-  { value: 'lmarena:search', label: 'LMArena Search' },
-  { value: 'livebench:global', label: 'LiveBench Global' },
-  { value: 'aggregated:general', label: 'Final General Ranking' },
-  // Coding mode sources
   { value: 'aa:livecodebench', label: 'AA LiveCodeBench' },
   { value: 'aa:scicode', label: 'AA SciCode' },
   { value: 'aa:terminalbench', label: 'AA TerminalBench' },
   { value: 'aa:tau2', label: 'AA Tau2' },
-  { value: 'aa:longcontext', label: 'AA Long Context' },
-  { value: 'aa:ifbench', label: 'AA IFBench' },
+  // LMArena sources
+  { value: 'lmarena:text', label: 'LMArena Text' },
+  { value: 'lmarena:vision', label: 'LMArena Vision' },
+  { value: 'lmarena:search', label: 'LMArena Search' },
   { value: 'lmarena:webdev', label: 'LMArena WebDev' },
+  // Other sources
   { value: 'swebench:bash', label: 'SWE-bench Bash' },
+  { value: 'livebench:global', label: 'LiveBench Global' },
+  // Aggregated rankings
+  { value: 'aggregated:general', label: 'Final General Ranking' },
   { value: 'aggregated:coding', label: 'Final Coding Ranking' },
 ];
 

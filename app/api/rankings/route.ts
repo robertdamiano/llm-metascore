@@ -229,9 +229,33 @@ export async function GET(request: NextRequest) {
   try {
     let result;
 
-    if (!forceRefresh) {
-      // Try to get from cache first
+    // Fetch overrides FIRST - we always need these
+    const overrides = await fetchOverrides();
+
+    // Check if there are any per-source overrides for this mode
+    const relevantSources = mode === 'general'
+      ? ['aa:omniscience', 'aa:hallucination', 'aa:gpqa', 'aa:ifbench', 'aa:longcontext', 'lmarena:text', 'lmarena:vision', 'lmarena:search', 'livebench:global']
+      : ['aa:livecodebench', 'aa:scicode', 'aa:terminalbench', 'aa:tau2', 'aa:longcontext', 'aa:ifbench', 'lmarena:webdev', 'swebench:bash'];
+
+    const hasPerSourceOverrides = overrides.some(override =>
+      relevantSources.includes(override.target as string)
+    );
+
+    // If there are per-source overrides, we must rebuild from source data (can't use aggregated cache)
+    const mustRebuild = hasPerSourceOverrides;
+
+    if (!forceRefresh && !mustRebuild) {
+      // Try to get from cache first (only if no per-source overrides)
       result = await getRankingsFromCache(mode);
+
+      // If we got cached data, apply current aggregated overrides to it
+      if (result && result.rankings) {
+        result.rankings = applyAggregatedOverrides(
+          result.rankings,
+          mode as RankingMode,
+          overrides
+        );
+      }
     }
 
     if (!result) {
@@ -242,9 +266,6 @@ export async function GET(request: NextRequest) {
         mode,
         fetchResult.sourceResults
       );
-
-      // Fetch overrides from Firestore
-      const overrides = await fetchOverrides();
 
       // Apply per-source overrides BEFORE aggregation
       const overriddenSources = applyPerSourceOverrides(
