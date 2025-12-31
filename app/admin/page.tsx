@@ -227,7 +227,11 @@ export default function AdminPage() {
 
   const getRelevantOverrides = () => {
     const relevantSources = getRelevantSources().map(s => s.value);
-    return overrides.filter(override => relevantSources.includes(override.target));
+    return overrides
+      .filter(override =>
+        override.mode === mode && relevantSources.includes(override.target)
+      )
+      .sort((a, b) => a.creatorName.localeCompare(b.creatorName));
   };
 
   // Password gate
