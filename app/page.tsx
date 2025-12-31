@@ -21,6 +21,10 @@ export default function Home() {
       'lmarena:search',
       'aa:omniscience',
       'aa:hallucination',
+      'aa:gpqa',
+      'aa:ifbench',
+      'aa:longcontext',
+      'livebench:global',
     ],
     coding: [
       'lmarena:webdev',
@@ -82,12 +86,15 @@ export default function Home() {
       .replace('lmarena:', 'LMArena ')
       .replace('aa:', 'Artificial Analysis ')
       .replace('swebench:', 'SWE-bench ')
+      .replace('livebench:', 'LiveBench ')
       .replace('text', 'Text')
       .replace('vision', 'Vision')
       .replace('search', 'Search')
       .replace('webdev', 'WebDev')
       .replace('omniscience', 'Omniscience')
       .replace('hallucination', 'Hallucination')
+      .replace('gpqa', 'GPQA Diamond')
+      .replace('global', 'Global')
       .replace('coding', 'Coding')
       .replace('agentic', 'Agentic')
       .replace('longcontext', 'Long Context')

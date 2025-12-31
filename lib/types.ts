@@ -29,6 +29,9 @@ export type SourceKey =
   | 'aa:scicode'
   | 'aa:terminalbench'
   | 'aa:tau2'
+  | 'aa:gpqa'
+  // LiveBench sources (from livebench.ai)
+  | 'livebench:global'
   // SWE-bench sources (from swebench.com)
   | 'swebench:bash';
 

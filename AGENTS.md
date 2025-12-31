@@ -6,13 +6,15 @@
 - Firebase Cloud Functions in `functions/` (`functions/src/index.ts` scheduled cache refresh with override application).
 
 ## Data Sources & Scrapers
-- **All scrapers** (`lib/scrapers/*.ts`): fetch live data from static HTML (no JS rendering needed)
+- **All scrapers** (`lib/scrapers/*.ts`): fetch live data from static HTML/CSV (no JS rendering needed)
   - `lmarena.ts`: LMArena Text, Vision, Search, WebDev category pages (lmarena.ai/leaderboard) - uses `fetchWithRetry()`
   - `artificial-analysis.ts`: Artificial Analysis metrics (artificialanalysis.ai) - uses `fetchWithRetry()`
     - Omniscience Index, Hallucination Rate: fetched from /evaluations/omniscience page
-    - Individual coding benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages using regex extraction
+    - GPQA Diamond: fetched from /evaluations/gpqa-diamond page
+    - Individual benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages using regex extraction
     - **Important**: Omniscience values use the simple `"omniscience":VALUE` field, not the `"omniscience_breakdown"` nested data. The scraper checks context to skip breakdown values and uses only the main leaderboard score (range: -100 to 100).
-    - Individual benchmark fields: `livecodebench`, `scicode`, `terminalbench_hard`, `tau2`, `lcr` (Long Context Reasoning), `ifbench`
+    - Individual benchmark fields: `livecodebench`, `scicode`, `terminalbench_hard`, `tau2`, `lcr` (Long Context Reasoning), `ifbench`, `gpqa`
+  - `livebench.ts`: LiveBench global average from CSV export (livebench.ai) - auto-detects most recent version from JavaScript bundle, calculates global average across all benchmarks
   - `swebench.ts`: SWE-bench Bash Only category (swebench.com) - uses `fetchWithRetry()`
 - **Retry logic**: All HTTP requests use `fetchWithRetry()` (`lib/utils/retry.ts`) with exponential backoff (1s → 2s → 4s + jitter). Retries on HTTP 429 (rate limit) and 500-599 (server errors), but not on 400-428 or 430-499 client errors.
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure

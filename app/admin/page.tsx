@@ -12,6 +12,10 @@ const SOURCE_OPTIONS: { value: OverrideTarget; label: string }[] = [
   { value: 'lmarena:search', label: 'LMArena Search' },
   { value: 'aa:omniscience', label: 'AA Omniscience' },
   { value: 'aa:hallucination', label: 'AA Hallucination' },
+  { value: 'aa:gpqa', label: 'AA GPQA Diamond' },
+  { value: 'aa:ifbench', label: 'AA IFBench' },
+  { value: 'aa:longcontext', label: 'AA Long Context' },
+  { value: 'livebench:global', label: 'LiveBench Global' },
   { value: 'aggregated:general', label: 'Final General Ranking' },
   // Coding mode sources
   { value: 'lmarena:webdev', label: 'LMArena WebDev' },
@@ -198,6 +202,10 @@ export default function AdminPage() {
           opt.value.includes('lmarena:search') ||
           opt.value.includes('aa:omniscience') ||
           opt.value.includes('aa:hallucination') ||
+          opt.value.includes('aa:gpqa') ||
+          opt.value.includes('livebench:global') ||
+          (opt.value.includes('aa:ifbench') && !opt.value.includes('coding')) ||
+          (opt.value.includes('aa:longcontext') && !opt.value.includes('coding')) ||
           opt.value === 'aggregated:general'
       );
     } else {
@@ -209,8 +217,8 @@ export default function AdminPage() {
           opt.value.includes('aa:scicode') ||
           opt.value.includes('aa:terminalbench') ||
           opt.value.includes('aa:tau2') ||
-          opt.value.includes('aa:longcontext') ||
-          opt.value.includes('aa:ifbench') ||
+          (opt.value.includes('aa:longcontext') && !opt.value.includes('general')) ||
+          (opt.value.includes('aa:ifbench') && !opt.value.includes('general')) ||
           opt.value === 'aggregated:coding'
       );
     }

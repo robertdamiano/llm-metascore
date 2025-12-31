@@ -4,24 +4,29 @@ import { aggregateAverageRank } from './aggregation';
 import { fetchLMArenaAllSources } from './scrapers/lmarena';
 import { fetchArtificialAnalysis } from './scrapers/artificial-analysis';
 import { fetchSWEBench } from './scrapers/swebench';
+import { fetchLiveBench } from './scrapers/livebench';
 
 // Leaderboard definitions
 const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   name: 'General Intelligence',
-  description: 'LMArena (Text/Vision/Search) + AA Omniscience + AA Hallucination',
+  description: 'Rankings aggregated from LMArena, Artificial Analysis, and LiveBench',
   sources: [
     'lmarena:text',
     'lmarena:vision',
     'lmarena:search',
     'aa:omniscience',
     'aa:hallucination',
+    'aa:gpqa',
+    'aa:ifbench',
+    'aa:longcontext',
+    'livebench:global',
   ],
   minLabsRequired: 3,
 };
 
 const CODING: LeaderboardConfig = {
   name: 'Coding',
-  description: 'LMArena WebDev + SWE-bench Bash + AA (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context, IFBench)',
+  description: 'Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench',
   sources: [
     'lmarena:webdev',
     'swebench:bash',
@@ -135,8 +140,33 @@ export async function fetchAllSources(): Promise<FetchAllSourcesResult> {
       });
     }
   } catch (error) {
-    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:longcontext', 'aa:ifbench', 'aa:livecodebench', 'aa:scicode', 'aa:terminalbench', 'aa:tau2'];
+    const aaSources: SourceKey[] = ['aa:omniscience', 'aa:hallucination', 'aa:longcontext', 'aa:ifbench', 'aa:livecodebench', 'aa:scicode', 'aa:terminalbench', 'aa:tau2', 'aa:gpqa'];
     for (const source of aaSources) {
+      sourceResults.push({
+        source,
+        status: 'failed',
+        entries: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  // Fetch LiveBench sources with individual error handling
+  try {
+    const livebenchData = await fetchLiveBench();
+    for (const [sourceKey, entries] of Object.entries(livebenchData)) {
+      sources[sourceKey] = entries;
+      sourceResults.push({
+        source: sourceKey as SourceKey,
+        status: 'success',
+        entries,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    const livebenchSources: SourceKey[] = ['livebench:global'];
+    for (const source of livebenchSources) {
       sourceResults.push({
         source,
         status: 'failed',

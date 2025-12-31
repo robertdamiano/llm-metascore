@@ -5,8 +5,8 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 ## Web Application
 
 A Next.js web application that fetches and displays real-time rankings from:
-- **General Intelligence**: LMArena (Text, Vision, Search) + Artificial Analysis (Omniscience Index, Hallucination Rate)
-- **Coding**: LMArena (WebDev) + SWE-bench (Bash Only) + Artificial Analysis (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench)
+- **General Intelligence**: LMArena (Text, Vision, Search) + Artificial Analysis (Omniscience, Hallucination, GPQA Diamond, IFBench, Long Context) + LiveBench (Global Average)
+- **Coding**: LMArena (WebDev) + Artificial Analysis (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context, IFBench)
 
 ### Setup
 
@@ -88,13 +88,14 @@ Firebase will automatically build and deploy your Next.js app with Cloud Functio
 
 ## Data Sources
 
-All data is fetched live from static HTML (no headless browser required):
+All data is fetched live from static HTML/CSV (no headless browser required):
 
 - **lmarena.ai/leaderboard**: Text, Vision, Search, WebDev category pages
 - **artificialanalysis.ai**:
   - Omniscience Index, Hallucination Rate: /evaluations/omniscience
-  - All individual coding benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages
-- **swebench.com**: Bash Only category benchmark
+  - GPQA Diamond: /evaluations/gpqa-diamond
+  - Individual benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages
+- **livebench.ai**: Global average from CSV export (auto-detects most recent version)
 
 ### Error Handling & Resilience
 
@@ -141,9 +142,10 @@ The application includes a password-protected admin panel for manual ranking adj
 - No tie-breaks (stable sort by average rank).
 
 Data composition:
-- **General Intelligence** (5 sources):
+- **General Intelligence** (9 sources):
     - LMArena: Text, Vision, Search
-    - Artificial Analysis: Omniscience Index, Hallucination Rate (lower is better)
+    - Artificial Analysis: Omniscience Index, Hallucination Rate (lower is better), GPQA Diamond, IFBench, Long Context Reasoning
+    - LiveBench: Global Average
 - **Coding** (8 sources):
     - LMArena: WebDev
     - SWE-bench: Bash Only

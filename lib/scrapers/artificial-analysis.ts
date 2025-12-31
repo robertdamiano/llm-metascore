@@ -11,6 +11,7 @@ interface AAModel {
   scicode?: number;
   terminalbench_hard?: number;
   tau2?: number;
+  gpqa?: number; // GPQA Diamond
 }
 
 function parseRSCPayload(html: string): AAModel[] {
@@ -216,6 +217,23 @@ function parseRSCPayload(html: string): AAModel[] {
         }
       }
     }
+
+    // Extract gpqa values
+    const gpqaRegex = /\\"gpqa\\":([0-9.]+)/g;
+    let gpqaMatch;
+    while ((gpqaMatch = gpqaRegex.exec(html)) !== null) {
+      const value = parseFloat(gpqaMatch[1]);
+      if (!isNaN(value)) {
+        const name = findClosestName(gpqaMatch.index);
+        if (name) {
+          const model = modelsByName.get(name) || { short_name: name };
+          if (model.gpqa === undefined) {
+            model.gpqa = value;
+            modelsByName.set(name, model);
+          }
+        }
+      }
+    }
   } catch (error) {
     console.error('Error parsing AA RSC payload:', error);
   }
@@ -289,6 +307,20 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
       }
     }
 
+    // Fetch and process GPQA Diamond metrics
+    const gpqaRes = await fetchWithRetry('https://artificialanalysis.ai/evaluations/gpqa-diamond', { cache: 'no-store' });
+    if (gpqaRes.ok) {
+      const gpqaModels = parseRSCPayload(await gpqaRes.text());
+      for (const model of gpqaModels) {
+        const existing = allModels.get(model.short_name);
+        if (existing) {
+          if (model.gpqa !== undefined) existing.gpqa = model.gpqa;
+        } else {
+          allModels.set(model.short_name, { ...model });
+        }
+      }
+    }
+
     const models = Array.from(allModels.values());
 
     if (models.length === 0) {
@@ -323,6 +355,9 @@ export async function fetchArtificialAnalysis(): Promise<Record<string, ModelEnt
 
     const tau2 = scoreToRank(models, 'tau2');
     if (tau2.length > 0) sources['aa:tau2'] = tau2;
+
+    const gpqa = scoreToRank(models, 'gpqa');
+    if (gpqa.length > 0) sources['aa:gpqa'] = gpqa;
 
     return sources;
   } catch (error) {
