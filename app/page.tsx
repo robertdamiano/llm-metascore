@@ -16,25 +16,25 @@ export default function Home() {
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
     general: [
-      'lmarena:text',
-      'lmarena:vision',
-      'lmarena:search',
       'aa:omniscience',
       'aa:hallucination',
       'aa:gpqa',
       'aa:ifbench',
       'aa:longcontext',
+      'lmarena:text',
+      'lmarena:vision',
+      'lmarena:search',
       'livebench:global',
     ],
     coding: [
-      'lmarena:webdev',
-      'swebench:bash',
       'aa:livecodebench',
       'aa:scicode',
       'aa:terminalbench',
       'aa:tau2',
       'aa:longcontext',
       'aa:ifbench',
+      'lmarena:webdev',
+      'swebench:bash',
     ],
   };
 
@@ -87,6 +87,9 @@ export default function Home() {
       .replace('aa:', 'Artificial Analysis ')
       .replace('swebench:', 'SWE-bench ')
       .replace('livebench:', 'LiveBench ')
+      .replace('longcontext', 'Long Context')
+      .replace('livecodebench', 'LiveCodeBench')
+      .replace('terminalbench', 'TerminalBench')
       .replace('text', 'Text')
       .replace('vision', 'Vision')
       .replace('search', 'Search')
@@ -97,11 +100,8 @@ export default function Home() {
       .replace('global', 'Global')
       .replace('coding', 'Coding')
       .replace('agentic', 'Agentic')
-      .replace('longcontext', 'Long Context')
       .replace('ifbench', 'IFBench')
-      .replace('livecodebench', 'LiveCodeBench')
       .replace('scicode', 'SciCode')
-      .replace('terminalbench', 'TerminalBench')
       .replace('tau2', 'Tau2')
       .replace('bash', 'Bash Only');
   };
@@ -352,9 +352,6 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 text-center text-sm text-gray-500">
           <p>
-            Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench
-          </p>
-          <p className="mt-2">
             Tracking: Anthropic, Google, OpenAI, and xAI
           </p>
         </footer>

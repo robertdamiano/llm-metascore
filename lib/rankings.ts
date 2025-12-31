@@ -9,16 +9,16 @@ import { fetchLiveBench } from './scrapers/livebench';
 // Leaderboard definitions
 const GENERAL_INTELLIGENCE: LeaderboardConfig = {
   name: 'General Intelligence',
-  description: 'Rankings aggregated from LMArena, Artificial Analysis, and LiveBench',
+  description: 'Rankings aggregated from Artificial Analysis, LMArena, and LiveBench',
   sources: [
-    'lmarena:text',
-    'lmarena:vision',
-    'lmarena:search',
     'aa:omniscience',
     'aa:hallucination',
     'aa:gpqa',
     'aa:ifbench',
     'aa:longcontext',
+    'lmarena:text',
+    'lmarena:vision',
+    'lmarena:search',
     'livebench:global',
   ],
   minLabsRequired: 3,
@@ -26,16 +26,16 @@ const GENERAL_INTELLIGENCE: LeaderboardConfig = {
 
 const CODING: LeaderboardConfig = {
   name: 'Coding',
-  description: 'Rankings aggregated from LMArena, Artificial Analysis, and SWE-bench',
+  description: 'Rankings aggregated from Artificial Analysis, LMArena, and SWE-bench',
   sources: [
-    'lmarena:webdev',
-    'swebench:bash',
     'aa:livecodebench',
     'aa:scicode',
     'aa:terminalbench',
     'aa:tau2',
     'aa:longcontext',
     'aa:ifbench',
+    'lmarena:webdev',
+    'swebench:bash',
   ],
   minLabsRequired: 3,
 };

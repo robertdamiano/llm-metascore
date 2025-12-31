@@ -7,25 +7,25 @@ const CREATORS = ['OpenAI', 'Google', 'Anthropic', 'xAI'] as const;
 
 const SOURCE_OPTIONS: { value: OverrideTarget; label: string }[] = [
   // General mode sources
-  { value: 'lmarena:text', label: 'LMArena Text' },
-  { value: 'lmarena:vision', label: 'LMArena Vision' },
-  { value: 'lmarena:search', label: 'LMArena Search' },
   { value: 'aa:omniscience', label: 'AA Omniscience' },
   { value: 'aa:hallucination', label: 'AA Hallucination' },
   { value: 'aa:gpqa', label: 'AA GPQA Diamond' },
   { value: 'aa:ifbench', label: 'AA IFBench' },
   { value: 'aa:longcontext', label: 'AA Long Context' },
+  { value: 'lmarena:text', label: 'LMArena Text' },
+  { value: 'lmarena:vision', label: 'LMArena Vision' },
+  { value: 'lmarena:search', label: 'LMArena Search' },
   { value: 'livebench:global', label: 'LiveBench Global' },
   { value: 'aggregated:general', label: 'Final General Ranking' },
   // Coding mode sources
-  { value: 'lmarena:webdev', label: 'LMArena WebDev' },
-  { value: 'swebench:bash', label: 'SWE-bench Bash' },
   { value: 'aa:livecodebench', label: 'AA LiveCodeBench' },
   { value: 'aa:scicode', label: 'AA SciCode' },
   { value: 'aa:terminalbench', label: 'AA TerminalBench' },
   { value: 'aa:tau2', label: 'AA Tau2' },
   { value: 'aa:longcontext', label: 'AA Long Context' },
   { value: 'aa:ifbench', label: 'AA IFBench' },
+  { value: 'lmarena:webdev', label: 'LMArena WebDev' },
+  { value: 'swebench:bash', label: 'SWE-bench Bash' },
   { value: 'aggregated:coding', label: 'Final Coding Ranking' },
 ];
 
@@ -197,12 +197,12 @@ export default function AdminPage() {
     if (mode === 'general') {
       return SOURCE_OPTIONS.filter(
         opt =>
-          opt.value.includes('lmarena:text') ||
-          opt.value.includes('lmarena:vision') ||
-          opt.value.includes('lmarena:search') ||
           opt.value.includes('aa:omniscience') ||
           opt.value.includes('aa:hallucination') ||
           opt.value.includes('aa:gpqa') ||
+          opt.value.includes('lmarena:text') ||
+          opt.value.includes('lmarena:vision') ||
+          opt.value.includes('lmarena:search') ||
           opt.value.includes('livebench:global') ||
           (opt.value.includes('aa:ifbench') && !opt.value.includes('coding')) ||
           (opt.value.includes('aa:longcontext') && !opt.value.includes('coding')) ||
@@ -211,12 +211,12 @@ export default function AdminPage() {
     } else {
       return SOURCE_OPTIONS.filter(
         opt =>
-          opt.value.includes('lmarena:webdev') ||
-          opt.value.includes('swebench') ||
           opt.value.includes('aa:livecodebench') ||
           opt.value.includes('aa:scicode') ||
           opt.value.includes('aa:terminalbench') ||
           opt.value.includes('aa:tau2') ||
+          opt.value.includes('lmarena:webdev') ||
+          opt.value.includes('swebench') ||
           (opt.value.includes('aa:longcontext') && !opt.value.includes('general')) ||
           (opt.value.includes('aa:ifbench') && !opt.value.includes('general')) ||
           opt.value === 'aggregated:coding'
