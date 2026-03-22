@@ -109,8 +109,16 @@ jobs:
     needs:
       - 'dispatch'
       - 'review'
+    # - Skipped dispatch: do nothing (avoids false positive when command output is empty).
+    # - Successful dispatch, non-review command: explain we could not process.
+    # - Failed dispatch: job ran but a step errored (e.g. ack comment); still try to notify.
+    # - Failed review: notify after Gemini review failure.
     if: |-
-      ${{ always() && !cancelled() && ((needs.review.result == 'failure') || (needs.dispatch.outputs.command != 'review')) }}
+      ${{ always() && !cancelled() && (
+          (needs.dispatch.result == 'success' && needs.dispatch.outputs.command != 'review') ||
+          (needs.dispatch.result == 'failure') ||
+          (needs.review.result == 'failure')
+        ) }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
