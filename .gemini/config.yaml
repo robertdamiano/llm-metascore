@@ -1,0 +1,8 @@
+# This stops the GitHub App from auto-summarizing and auto-reviewing
+pull_request_opened:
+  summary: false
+  code_review: false
+
+# This ensures the App still responds to your manual /gemini commands
+code_review:
+  disable: false
