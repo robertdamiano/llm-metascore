@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "patch-package",
     "firebase:deploy": "firebase deploy"
   },
   "dependencies": {
@@ -28,7 +29,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^15.5.7",
-    "firebase-tools": "^14.17.0",
+    "firebase-tools": "^14.26.0",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

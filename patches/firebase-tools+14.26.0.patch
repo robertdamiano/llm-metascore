@@ -1,0 +1,18 @@
+diff --git a/node_modules/firebase-tools/lib/gcp/run.js b/node_modules/firebase-tools/lib/gcp/run.js
+index 5803615..69e69f4 100644
+--- a/node_modules/firebase-tools/lib/gcp/run.js
++++ b/node_modules/firebase-tools/lib/gcp/run.js
+@@ -40,6 +40,13 @@ async function getService(name) {
+ exports.getService = getService;
+ async function updateService(name, service) {
+     delete service.status;
++    // https://github.com/firebase/firebase-tools/issues/10148 - avoid 409 ALREADY_EXISTS when hosting adds Run traffic tags
++    if (service.spec &&
++        service.spec.template &&
++        service.spec.template.metadata &&
++        service.spec.template.metadata.name) {
++        delete service.spec.template.metadata.name;
++    }
+     service = await exports.replaceService(name, service);
+     let retry = 0;
+     while (!exports.serviceIsResolved(service)) {
