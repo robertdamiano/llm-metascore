@@ -16,27 +16,8 @@ export default function Home() {
   const [staleSources, setStaleSources] = useState<string[]>([]);
 
   const expectedSourcesByMode: Record<RankingMode, string[]> = {
-    general: [
-      'aa:omniscience',
-      'aa:hallucination',
-      'aa:gpqa',
-      'aa:ifbench',
-      'aa:longcontext',
-      'lmarena:text',
-      'lmarena:vision',
-      'lmarena:search',
-      'livebench:global',
-    ],
-    coding: [
-      'aa:livecodebench',
-      'aa:scicode',
-      'aa:terminalbench',
-      'aa:tau2',
-      'aa:longcontext',
-      'aa:ifbench',
-      'lmarena:webdev',
-      'swebench:bash',
-    ],
+    general: GENERAL_INTELLIGENCE.sources,
+    coding: CODING.sources,
   };
 
   const fetchRankings = useCallback(async (forceRefresh = false) => {
