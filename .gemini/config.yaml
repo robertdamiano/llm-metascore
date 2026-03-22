@@ -1,8 +1,8 @@
-# This stops the GitHub App from auto-summarizing and auto-reviewing
-pull_request_opened:
-  summary: false
-  code_review: false
-
-# This ensures the App still responds to your manual /gemini commands
+# Gemini Code Assist: https://developers.google.com/gemini-code-assist/docs/customize-gemini-behavior-github
 code_review:
+  # Still respond to manual /gemini commands on PRs
   disable: false
+  # No automatic summary or review when a PR is opened
+  pull_request_opened:
+    summary: false
+    code_review: false
