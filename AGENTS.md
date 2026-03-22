@@ -19,7 +19,7 @@
 - **Retry logic**: All HTTP requests use `fetchWithRetry()` (`lib/utils/retry.ts`) with exponential backoff (1s → 2s → 4s + jitter). Retries on HTTP 429 (rate limit) and 500-599 (server errors), but not on 400-428 or 430-499 client errors.
 - When updating data sources, ensure scrapers return `ModelEntry[]` with `{name, rank, score?, source}` structure
 - All scrapers are imported by `lib/rankings.ts` which orchestrates fetching and aggregation
-- **Error handling**: `fetchAllSources()` wraps each scraper group (LMArena, AA, SWE-bench) in try-catch blocks. Failed sources return empty arrays and error details in `SourceFetchResult[]`, allowing rankings to be computed from available sources. The API route (`app/api/rankings/route.ts`) merges fresh data with cached fallbacks and returns per-source health status.
+- **Error handling**: `fetchAllSources()` wraps each scraper group (LMArena, Artificial Analysis, LiveBench, SWE-bench) in try-catch blocks. Failed sources return empty arrays and error details in `SourceFetchResult[]`, allowing rankings to be computed from available sources. The rankings API (`app/api/rankings/route.ts`) merges Firestore `rankings_cache` with live data only for the keys listed in `SOURCES_PER_MODE` for the requested mode, then returns per-source health status; align that list with real `SourceKey` values when adding sources.
 
 ## Admin Override System
 - **Admin UI**: Password-protected panel at `/admin` (`app/admin/page.tsx`) for manual ranking adjustments
@@ -47,8 +47,7 @@
 - TypeScript: 2-space indentation; keep types explicit for props/return values; prefer `async/await`; use the `@/*` path alias. Keep client/server component boundaries explicit (add `'use client'` only when hooks are used).
 - React: functional components, minimal state, prefer derived data in helpers under `lib/`.
 - Tailwind: favor composable utility classes already used in `app/page.tsx`; avoid inline styles.
-- Python: PEP8 with type hints; reuse shared helpers in `core/aggregate.py` and `core/vendors.py` instead of duplicating logic.
-- Data rules: dense, tie-preserving ranks and creator filtering must stay aligned between TS (`lib/aggregation.ts`) and Python (`core/aggregate.py`); update both if logic changes.
+- Data rules: dense, tie-preserving ranks and creator filtering live in `lib/aggregation.ts` and `lib/rankings.ts` / `lib/vendors.ts`; keep behavior consistent when changing aggregation or mapping.
 
 ## Testing Guidelines
 - **Pre-commit workflow** (MANDATORY before committing):
@@ -59,8 +58,7 @@
   5. Test the admin panel at http://localhost:3000/admin if admin-related changes were made
   6. Verify API endpoints work correctly (check browser console for errors)
 - No automated test suite yet; manual testing is critical before commits
-- For CLI updates, run `python -m llm_metascore.cli --type general` to confirm snapshots parse
-- If adding tests, prefer lightweight unit tests (e.g., Node `node:test` or Python `pytest`) that cover aggregation and vendor mapping
+- If adding tests, prefer lightweight unit tests (e.g., Node `node:test`) that cover aggregation and vendor mapping
 
 ## Commit & Pull Request Guidelines
 - **Before committing**: Always follow the testing workflow above (lint, build, dev server testing)

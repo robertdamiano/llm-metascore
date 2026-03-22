@@ -6,7 +6,7 @@ Aggregated rankings of top LLM creators (OpenAI, Google, Anthropic, xAI) from mu
 
 A Next.js web application that fetches and displays real-time rankings from:
 - **General Intelligence**: LMArena (Text, Vision, Search) + Artificial Analysis (Omniscience, Hallucination, GPQA Diamond, IFBench, Long Context) + LiveBench (Global Average)
-- **Coding**: LMArena (WebDev) + Artificial Analysis (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context, IFBench)
+- **Coding**: LMArena (WebDev) + SWE-bench (Bash only) + Artificial Analysis (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context, IFBench)
 
 ### Setup
 
@@ -96,6 +96,7 @@ All data is fetched live from static HTML/CSV (no headless browser required):
   - GPQA Diamond: /evaluations/gpqa-diamond
   - Individual benchmarks (LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench): parsed from evaluation pages
 - **livebench.ai**: Global average from CSV export (auto-detects most recent version)
+- **swebench.com**: SWE-bench Bash Only category (static HTML)
 
 ### Error Handling & Resilience
 
@@ -110,7 +111,7 @@ The application implements robust error handling:
 - Each data source is fetched independently with error handling
 - If a source fails, rankings are computed from remaining successful sources
 - API responses include per-source health status (`success`, `cached`, or `failed`)
-- Failed sources fall back to cached data when available
+- On an API rebuild (cache miss or forced refresh), per-source Firestore fallback applies only to the source keys merged in `SOURCES_PER_MODE` inside `app/api/rankings/route.ts`; other keys use the live fetch only for that request. The scheduled Cloud Function still writes every successfully fetched source to `rankings_cache`.
 - The app remains functional even when individual sources are temporarily unavailable
 
 ### Admin Override System
@@ -152,6 +153,8 @@ Data composition:
     - Artificial Analysis: LiveCodeBench, SciCode, TerminalBench, Tau2, Long Context Reasoning, IFBench
 
 ## Vendor Mapping
+
+Model names may also map via explicit provider slugs (e.g. `openai/…`, `google/…`, `anthropic/…`, `x-ai/…`, `xai/…`) before the heuristics below.
 
 - OpenAI: contains `gpt` or `chatgpt`, or starts with `o<number>` (e.g., `o3`, `o4`)
 - Google: contains `gemini`, `imagen`, or `veo`
